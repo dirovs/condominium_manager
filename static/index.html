@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CondoManager - Administración de Condominios</title>
+    <meta name="description" content="Sistema premium para la administración de edificios, control de alícuotas, gastos, conciliación bancaria y procesamiento de comprobantes.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- CSS File -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Horizontal Navigation -->
+        <nav class="top-nav">
+            <div class="nav-brand">
+                <div class="logo-icon"><i data-lucide="building-2"></i></div>
+                <div class="logo-text">
+                    <h2>CondoManager</h2>
+                    <span>Panel Administrativo</span>
+                </div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-menu-item nav-item active" data-tab="resumen" id="nav-resumen">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Resumen</span>
+                </li>
+                <!-- Condomino specific tab -->
+                <li class="nav-menu-item nav-item" data-tab="mis-finanzas" id="nav-mis-finanzas" style="display:none;">
+                    <i data-lucide="receipt"></i>
+                    <span>Mis Finanzas</span>
+                </li>
+                <li class="nav-menu-item has-submenu" id="submenu-directorio">
+                    <div class="submenu-trigger">
+                        <i data-lucide="folder-open"></i>
+                        <span>Directorio</span>
+                        <i data-lucide="chevron-down" class="chevron-icon"></i>
+                    </div>
+                    <ul class="submenu">
+                        <li class="nav-item" data-tab="departamentos" id="nav-departamentos">
+                            <i data-lucide="home"></i>
+                            <span>Departamentos</span>
+                        </li>
+                        <li class="nav-item" data-tab="deudores" id="nav-deudores">
+                            <i data-lucide="users-round"></i>
+                            <span>Deudores y Extras</span>
+                        </li>
+                    </ul>
+                </li>
+                <li class="nav-menu-item has-submenu" id="submenu-finanzas">
+                    <div class="submenu-trigger">
+                        <i data-lucide="landmark"></i>
+                        <span>Finanzas</span>
+                        <i data-lucide="chevron-down" class="chevron-icon"></i>
+                    </div>
+                    <ul class="submenu">
+                        <li class="nav-item" data-tab="alicuotas" id="nav-alicuotas">
+                            <i data-lucide="receipt"></i>
+                            <span>Alícuotas</span>
+                        </li>
+                        <li class="nav-item" data-tab="gastos" id="nav-gastos">
+                            <i data-lucide="wallet"></i>
+                            <span>Gastos / Egresos</span>
+                        </li>
+                        <li class="nav-item" data-tab="banco" id="nav-banco">
+                            <i data-lucide="wallet-cards"></i>
+                            <span>Estado de Cuenta</span>
+                        </li>
+                        <li class="nav-item" data-tab="reportes" id="nav-reportes">
+                            <i data-lucide="file-spreadsheet"></i>
+                            <span>Reportes Financieros</span>
+                        </li>
+                    </ul>
+                </li>
+                <li class="nav-menu-item has-submenu" id="submenu-ajustes">
+                    <div class="submenu-trigger">
+                        <i data-lucide="settings"></i>
+                        <span>Ajustes</span>
+                        <i data-lucide="chevron-down" class="chevron-icon"></i>
+                    </div>
+                    <ul class="submenu">
+                        <li class="nav-item" data-tab="whatsapp" id="nav-whatsapp">
+                            <i data-lucide="message-square-text"></i>
+                            <span>Simulador WhatsApp</span>
+                            <span class="badge" id="badge-validation-count" style="display:none;">0</span>
+                        </li>
+                        <li class="nav-item" data-tab="admins" id="nav-admins" style="display:none;">
+                            <i data-lucide="user-cog"></i>
+                            <span>Administradores</span>
+                        </li>
+                        <li class="nav-item" data-tab="config" id="nav-config">
+                            <i data-lucide="settings-2"></i>
+                            <span>Configuración</span>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="nav-right">
+                <div class="connection-status offline" id="connection-status-widget">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Base Local (Simulada)</span>
+                </div>
+                <div class="user-profile" style="position: relative; cursor: pointer;" onclick="toggleProfileDropdown(event)">
+                    <div class="profile-info">
+                        <p class="profile-name" id="user-display-name">Administración El Mirador</p>
+                        <p class="profile-role" id="user-display-role">Super Administrador</p>
+                    </div>
+                    <div class="profile-avatar"><i data-lucide="user"></i></div>
+                    <div class="profile-dropdown" id="profile-dropdown" style="display:none; position: absolute; top: 50px; right: 0; background: #1e293b; border: 1px solid var(--border-glass); border-radius: 8px; box-shadow: var(--shadow-premium); z-index: 1000; padding: 8px; min-width: 140px;">
+                        <button class="btn btn-secondary-sm btn-block" onclick="logoutUser()" style="width:100%; display:flex; align-items:center; gap:8px; background:transparent; border:none; color:#f8fafc; text-align:left; font-size:0.85rem; padding:8px 12px; cursor:pointer; border-radius:4px;">
+                            <i data-lucide="log-out" style="width:14px;height:14px;"></i> Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="top-bar" style="display:none;">
+                <h1 id="view-title">Resumen General</h1>
+            </header>
+            
+            <div class="content-header-title" style="margin-bottom: 25px;">
+                <h1 id="view-title-main" style="font-family: var(--font-heading); font-size: 2rem; font-weight: 700; letter-spacing: -0.8px;">Resumen General</h1>
+            </div>
+
+            <!-- Notifications overlay -->
+            <div id="toast-container" class="toast-container"></div>
+
+            <!-- TAB 1: Resumen (Dashboard) -->
+            <section id="tab-resumen" class="tab-content active-tab">
+                <!-- KPI cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card gradient-blue">
+                        <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+                        <div class="kpi-content">
+                            <h3>Ingresos Totales</h3>
+                            <p class="kpi-value" id="kpi-revenue">$0.00</p>
+                            <span class="kpi-label">Alícuotas + Extras Cobradas</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card gradient-red">
+                        <div class="kpi-icon"><i data-lucide="trending-down"></i></div>
+                        <div class="kpi-content">
+                            <h3>Egresos Totales</h3>
+                            <p class="kpi-value" id="kpi-expenses">$0.00</p>
+                            <span class="kpi-label">Gastos del Edificio</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card gradient-purple">
+                        <div class="kpi-icon"><i data-lucide="scale"></i></div>
+                        <div class="kpi-content">
+                            <h3>Saldo Neto</h3>
+                            <p class="kpi-value" id="kpi-balance">$0.00</p>
+                            <span class="kpi-label">Fondos en Caja</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card gradient-orange">
+                        <div class="kpi-icon"><i data-lucide="alert-circle"></i></div>
+                        <div class="kpi-content">
+                            <h3>Cartera Vencida</h3>
+                            <p class="kpi-value text-red" id="kpi-debt">$0.00</p>
+                            <span class="kpi-label" id="kpi-debtors-count">0 Propietarios en Mora</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Flujo de Caja Mensual</h3>
+                            <span>Ingresos vs Egresos</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="cashflowChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Distribución de Gastos</h3>
+                            <span>Por categoría de egresos</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="expensesChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card progress-card">
+                        <div class="chart-header">
+                            <h3>Efectividad de Recaudación</h3>
+                            <span>Mes Actual (Junio 2026)</span>
+                        </div>
+                        <div class="progress-gauge-container">
+                            <div class="gauge-value" id="gauge-percent">0%</div>
+                            <div class="gauge-circle-outer">
+                                <div class="gauge-circle-fill" id="gauge-fill"></div>
+                            </div>
+                            <span class="gauge-label" id="gauge-subtitle">0 de 0 departamentos pagados</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent transactions split table -->
+                <div class="split-table-grid">
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3>Últimos Pagos Registrados</h3>
+                            <button class="btn btn-secondary-sm" onclick="switchTab('alicuotas')">Ver todos</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table" id="table-recent-payments">
+                                <thead>
+                                    <tr>
+                                        <th>Unidad</th>
+                                        <th>Propietario</th>
+                                        <th>Mes</th>
+                                        <th>Monto</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3>Últimos Gastos</h3>
+                            <button class="btn btn-secondary-sm" onclick="switchTab('gastos')">Ver todos</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table" id="table-recent-expenses">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Categoría</th>
+                                        <th>Descripción</th>
+                                        <th>Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: Departamentos -->
+            <section id="tab-departamentos" class="tab-content">
+                <div class="table-card">
+                    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3>Directorio de Departamentos</h3>
+                            <p class="card-subtitle" style="margin-top: 4px;">Consulta y edita los datos de los departamentos y contactos registrados.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <button class="btn btn-purple" onclick="openAdminCertificateModal()">
+                                <i data-lucide="award" style="width:14px;height:14px;"></i> Emitir Certificado
+                            </button>
+                            <button class="btn btn-primary" onclick="openModal('modal-add-unit')">
+                                <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Registrar Departamento
+                            </button>
+                            <button class="btn btn-secondary" onclick="document.getElementById('units-file-input').click()">
+                                <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> Carga Masiva (CSV/XLSX)
+                            </button>
+                            <input type="file" id="units-file-input" style="display:none;" accept=".csv,.xlsx" onchange="uploadUnitsFile(event)">
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table-detailed" id="table-units">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" onclick="toggleSortUnits('id')">Depto <i data-lucide="chevrons-up-down" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-left:4px;"></i></th>
+                                    <th class="sortable" onclick="toggleSortUnits('owner')">Propietario / Contacto <i data-lucide="chevrons-up-down" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-left:4px;"></i></th>
+                                    <th class="sortable" onclick="toggleSortUnits('tenant')">Inquilino / Contacto <i data-lucide="chevrons-up-down" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-left:4px;"></i></th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: Alícuotas -->
+            <section id="tab-alicuotas" class="tab-content">
+                <!-- Generación de Alícuotas Panel (Masiva o Individual) -->
+                <div class="form-card" style="margin-bottom: 20px; padding: 15px; border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h4 style="margin: 0; font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="badge-plus" class="text-purple"></i> Generar Emisión de Alícuotas
+                            </h4>
+                            <p class="card-subtitle" style="margin: 3px 0 0 0; font-size: 0.8rem;">Emite alícuotas mensuales de forma masiva o individual por departamento.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <select id="emit-aliquot-unit" onchange="handleEmitUnitChange()" style="width: 175px; padding: 8px 12px; border-radius: 8px;">
+                                <option value="all">🏢 Todos (Masivo)</option>
+                            </select>
+                            <select id="emit-aliquot-month" style="width: 130px; padding: 8px 12px; border-radius: 8px;">
+                                <option value="Enero">Enero</option>
+                                <option value="Febrero">Febrero</option>
+                                <option value="Marzo">Marzo</option>
+                                <option value="Abril">Abril</option>
+                                <option value="Mayo">Mayo</option>
+                                <option value="Junio">Junio</option>
+                                <option value="Julio" selected>Julio</option>
+                                <option value="Agosto">Agosto</option>
+                                <option value="Septiembre">Septiembre</option>
+                                <option value="Octubre">Octubre</option>
+                                <option value="Noviembre">Noviembre</option>
+                                <option value="Diciembre">Diciembre</option>
+                            </select>
+                            <select id="emit-aliquot-year" style="width: 95px; padding: 8px 12px; border-radius: 8px;">
+                                <option value="2026" selected>2026</option>
+                                <option value="2027">2027</option>
+                                <option value="2028">2028</option>
+                            </select>
+                            <input type="number" id="emit-aliquot-amount" placeholder="Monto base ($)" step="0.01" min="0" style="width: 120px; padding: 8px 12px; border-radius: 8px; display: none;">
+                            <button class="btn btn-primary" onclick="emitAliquots()" style="padding: 8px 16px;">
+                                <i data-lucide="zap" style="width:14px;height:14px;"></i> <span id="btn-emit-text">Emitir Alícuotas</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden file input for row-level aliquot upload -->
+                <input type="file" id="aliquot-file-input" style="display: none;" accept="image/*,application/pdf" onchange="handleAliquotFileChange(event)">
+
+                <div class="content-header-actions" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div class="search-filters" style="margin-bottom: 0;">
+                        <div class="input-icon-group">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="filter-aliquot-search" placeholder="Buscar por Unidad o Propietario...">
+                        </div>
+                        <select id="filter-aliquot-month">
+                            <option value="">Todos los Meses</option>
+                        </select>
+                        <select id="filter-aliquot-year">
+                            <option value="">Todos los Años</option>
+                        </select>
+                        <select id="filter-aliquot-status">
+                            <option value="">Todos los Estados</option>
+                            <option value="Pagado">Pagado</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Validación Manual">Validación Manual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" onclick="exportAliquotsCsv()">
+                            <i data-lucide="file-spreadsheet"></i> Exportar a Excel
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-responsive">
+                        <table class="table-detailed" id="table-aliquots">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Unidad</th>
+                                    <th>Propietario</th>
+                                    <th>Mes / Año</th>
+                                    <th>Monto Alícuota</th>
+                                    <th>Multa Recargo</th>
+                                    <th>Monto Total</th>
+                                    <th>Fecha Pago</th>
+                                    <th>Referencia Banco</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-controls" id="pagination-aliquots"></div>
+                </div>
+            </section>
+
+            <!-- TAB 3: Gastos -->
+            <section id="tab-gastos" class="tab-content">
+                <div class="table-card">
+                    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3>Historial de Egresos</h3>
+                            <p class="card-subtitle" style="margin-top: 4px;">Detalle y registro de los gastos realizados en el condominio.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button class="btn btn-primary" onclick="openModal('modal-add-expense')">
+                                <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Registrar Gasto
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportExpensesCsv()">
+                                <i data-lucide="file-spreadsheet"></i> Exportar a Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table-detailed" id="table-expenses">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Categoría</th>
+                                    <th>Descripción</th>
+                                    <th>Monto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-controls" id="pagination-expenses"></div>
+                </div>
+
+                <div class="table-card" style="margin-top: 30px;">
+                    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3>Otros Ingresos (Generales)</h3>
+                            <p class="card-subtitle" style="margin-top: 4px;">Ingresos generales no vinculados a ningún departamento (ej. intereses bancarios, alquileres de áreas comunes).</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button class="btn btn-primary" onclick="openModal('modal-add-other-income')">
+                                <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Registrar Otro Ingreso
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table-detailed" id="table-other-incomes">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Concepto / Detalle</th>
+                                    <th>Referencia</th>
+                                    <th>Monto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-controls" id="pagination-other-incomes"></div>
+                </div>
+            </section>
+
+            <!-- TAB 4: Deudores y Cargos Extraordinarios -->
+            <section id="tab-deudores" class="tab-content">
+                <div class="content-header-actions" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 600; margin: 0;">Gestión de Mora y Cargos Adicionales</h3>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-purple" onclick="openModal('modal-add-charge')">
+                            <i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> Emitir Cargo / Multa
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportDebtorsCsv()">
+                            <i data-lucide="file-spreadsheet"></i> Exportar a Excel
+                        </button>
+                        <button class="btn btn-primary" onclick="exportFinancialPdf()">
+                            <i data-lucide="file-text"></i> Exportar Reporte PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-layout" style="display: flex; flex-direction: column; gap: 24px; max-width: 100%;">
+                    <!-- Debtors list -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3>Control de Deudores en Mora</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table-detailed" id="table-debtors">
+                                <thead>
+                                    <tr>
+                                        <th>Unidad</th>
+                                        <th>Propietario</th>
+                                        <th>Meses Vencidos</th>
+                                        <th>Detalles de Deuda</th>
+                                        <th>Deuda Total</th>
+                                        <th>Acción de Cobro</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Additional charges log -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3>Registro de Cargos Adicionales y Multas</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table-detailed" id="table-additional-charges">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Unidad</th>
+                                        <th>Propietario</th>
+                                        <th>Tipo</th>
+                                        <th>Descripción</th>
+                                        <th>Monto</th>
+                                        <th>Emisión</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: Estado de Cuenta (Banco) -->
+            <section id="tab-banco" class="tab-content">
+                <!-- ACCIONES DE ESTADO DE CUENTA -->
+                <div class="content-header-actions" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 600; margin: 0;">Control y Conciliación Bancaria</h3>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-primary" onclick="openModal('modal-upload-statement')">
+                            <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> Cargar Estado de Cuenta
+                        </button>
+                        <button class="btn btn-purple" onclick="openModal('modal-upload-receipt-manual')">
+                            <i data-lucide="receipt" style="width:14px;height:14px;"></i> Cargar Comprobante Manual
+                        </button>
+                        <button class="btn btn-secondary" onclick="openModal('modal-add-bank')">
+                            <i data-lucide="badge-plus" style="width:14px;height:14px;"></i> Registrar Movimiento Manual
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONCILIACIÓN INTERACTIVA WIDGET -->
+                <div class="table-card" style="margin-bottom: 24px;">
+                    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3><i data-lucide="git-pull-request"></i> Conciliación Bancaria Interactiva (Manual)</h3>
+                            <p class="card-subtitle" style="margin-top: 4px;">Selecciona un cobro pendiente de la izquierda y emparéjalo con un movimiento bancario no conciliado de la derecha.</p>
+                        </div>
+                        <button class="btn btn-secondary-sm" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); color: #c7d2fe;" onclick="runMassReconciliation()">
+                            <i data-lucide="zap"></i> Conciliación Masiva
+                        </button>
+                    </div>
+
+                    <div class="reconcile-interactive-container">
+                        <!-- Left Panel: Payments -->
+                        <div class="reconcile-column">
+                            <div class="column-header">
+                                <span>Cobros Pendientes y Val. Manual</span>
+                                <span class="badge badge-purple" id="reconcile-payments-count">0</span>
+                            </div>
+                            <div class="reconcile-list" id="reconcile-payments-list">
+                                <!-- Dynamic list of aliquots/charges -->
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Bank Transactions -->
+                        <div class="reconcile-column">
+                            <div class="column-header">
+                                <span>Movimientos Bancarios sin Conciliar</span>
+                                <span class="badge badge-emerald" id="reconcile-bank-count">0</span>
+                            </div>
+                            <div class="reconcile-list" id="reconcile-bank-list">
+                                <!-- Dynamic list of unreconciled bank statement transactions -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Matching Bar / Action Button -->
+                    <div class="reconcile-action-bar" id="reconcile-action-bar" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;">
+                        <div class="match-summary-container" style="display: flex; gap: 20px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                            <div class="match-element-box" style="flex: 1; min-width: 200px;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Cobro Seleccionado:</span>
+                                <div id="selected-payment-display" class="selected-match-display empty">Ninguno seleccionado</div>
+                            </div>
+                            <div class="match-icon-box" style="display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
+                                <i data-lucide="arrow-right-left"></i>
+                            </div>
+                            <div class="match-element-box" style="flex: 1; min-width: 200px;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Transacción Bancaria Seleccionada:</span>
+                                <div id="selected-bank-display" class="selected-match-display empty">Ninguna seleccionada</div>
+                            </div>
+                        </div>
+                        
+                        <div class="match-actions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div id="match-amount-diff-warning" class="text-orange" style="font-size: 0.82rem; display:none; align-items:center; gap:5px;">
+                                <i data-lucide="alert-triangle" style="width:16px; height:16px;"></i>
+                                Advertencia: Los montos no coinciden exactamente.
+                            </div>
+                            <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 0.78rem; color: var(--text-muted); white-space: nowrap;">Recibo a nombre de:</span>
+                                    <select id="pair-input-recipient" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--card-bg); color: var(--text-color); font-size: 0.78rem;">
+                                        <option value="inquilino">Inquilino (Por Defecto)</option>
+                                        <option value="propietario">Propietario / Dueño</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" id="btn-reconcile-pair" disabled onclick="reconcileSelectedPair()">
+                                    <i data-lucide="link"></i> Vincular y Conciliar Seleccionados
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTORIAL COMPLETO DE ESTADO DE CUENTA -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>Estado de Cuenta - Movimientos Recibidos</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table-detailed" id="table-bank-transactions">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Referencia (Código)</th>
+                                    <th>Monto</th>
+                                    <th>Detalle en Banco</th>
+                                    <th>Conciliado</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-controls" id="pagination-bank"></div>
+                </div>
+            </section>
+
+            <!-- TAB: Reportes Financieros -->
+            <section id="tab-reportes" class="tab-content">
+                <!-- Header / Pill Switcher -->
+                <div class="report-nav-pills">
+                    <button class="report-pill-btn active" id="btn-tab-rep-payments" onclick="switchReportSubtype('payments')">
+                        <i data-lucide="receipt"></i>
+                        <span>Pagos y Recaudación</span>
+                    </button>
+                    <button class="report-pill-btn" id="btn-tab-rep-debtors" onclick="switchReportSubtype('debtors')">
+                        <i data-lucide="alert-circle"></i>
+                        <span>Deudores y Cartera Vencida</span>
+                    </button>
+                    <button class="report-pill-btn" id="btn-tab-rep-unreconciled" onclick="switchReportSubtype('unreconciled')">
+                        <i data-lucide="help-circle"></i>
+                        <span>Comprobantes Sin Conciliar</span>
+                    </button>
+                </div>
+
+                <!-- Filter Card -->
+                <div class="report-filter-bar">
+                    <div class="report-filter-row">
+                        <!-- Dates (For payments & unreconciled) -->
+                        <div class="report-filter-item" id="filter-group-start-date">
+                            <label for="rep-filter-start-date">Fecha Desde</label>
+                            <input type="date" id="rep-filter-start-date">
+                        </div>
+                        <div class="report-filter-item" id="filter-group-end-date">
+                            <label for="rep-filter-end-date">Fecha Hasta</label>
+                            <input type="date" id="rep-filter-end-date">
+                        </div>
+
+                        <!-- Unit (For payments & debtors) -->
+                        <div class="report-filter-item" id="filter-group-unit">
+                            <label for="rep-filter-unit">Departamento</label>
+                            <select id="rep-filter-unit">
+                                <option value="">Todos los departamentos</option>
+                            </select>
+                        </div>
+
+                        <!-- Dynamic Type/Category filter -->
+                        <div class="report-filter-item" id="filter-group-dynamic">
+                            <label for="rep-filter-dynamic" id="rep-filter-dynamic-label">Categoría</label>
+                            <select id="rep-filter-dynamic">
+                                <option value="">Todas las categorías</option>
+                                <option value="Alicuota">Alícuota</option>
+                                <option value="Abono">Abono</option>
+                                <option value="Multa / Cargo">Multa / Cargo</option>
+                                <option value="Otro Ingreso">Otro Ingreso</option>
+                            </select>
+                        </div>
+
+                        <!-- Filter & Export Action Buttons -->
+                        <div class="report-filter-actions">
+                            <button class="btn btn-primary" onclick="loadReportPreview()" title="Generar vista previa">
+                                <i data-lucide="refresh-cw"></i> Generar
+                            </button>
+                            <button class="btn btn-purple" onclick="exportCurrentReportPDF()" title="Descargar reporte en formato PDF">
+                                <i data-lucide="file-text"></i> Exportar PDF
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportCurrentReportExcel()" title="Descargar reporte en formato Excel (.xlsx)">
+                                <i data-lucide="file-spreadsheet"></i> Exportar Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards for Active Report -->
+                <div class="kpi-grid" id="report-kpis-grid" style="margin-bottom: 24px;">
+                    <!-- Dynamically populated KPI cards -->
+                </div>
+
+                <!-- Interactive Preview Table -->
+                <div class="table-card">
+                    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3 id="report-table-title">Vista Previa del Reporte</h3>
+                            <p class="card-subtitle" id="report-table-subtitle">Resultados generados según los filtros seleccionados.</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <input type="text" id="report-quick-search" placeholder="Buscar en resultados..." oninput="filterReportTableClientSide()" style="background: var(--bg-input); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 6px 12px; color: var(--text-main); font-size: 0.82rem;">
+                            <span id="report-records-count" class="badge" style="font-size: 0.8rem; background: rgba(99, 102, 241, 0.2); color: var(--text-main); padding: 6px 12px;">0 registros</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table-detailed" id="table-financial-report">
+                            <thead id="report-thead">
+                                <!-- Dynamic headers -->
+                            </thead>
+                            <tbody id="report-tbody">
+                                <tr><td colspan="8" class="text-center" style="padding: 30px; color: var(--text-muted);">Cargando reporte...</td></tr>
+                            </tbody>
+                            <tfoot id="report-tfoot" class="report-table-footer-totals">
+                                <!-- Dynamic totals -->
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: Simulador WhatsApp -->
+            <section id="tab-whatsapp" class="tab-content">
+                <div class="whatsapp-simulator-layout">
+                    <!-- WhatsApp Side Panels -->
+                    <div class="simulator-controls">
+                        <div class="controls-card">
+                            <h3>Plantillas de Prueba (Demo)</h3>
+                            <p class="controls-desc">Haz clic en una plantilla para precargar un caso típico en el simulador de chat.</p>
+                            
+                            <div class="template-buttons-list">
+                                <button class="btn btn-secondary btn-block text-left" onclick="loadCaseTemplate('jenny')">
+                                    <strong>Caso 1: Depósito Exitoso (Jenny Portilla)</strong>
+                                    <span>Depto 701 - Alícuota de Abril. Existe depósito bancario con su Cédula.</span>
+                                </button>
+                                <button class="btn btn-secondary btn-block text-left" onclick="loadCaseTemplate('sofia')">
+                                    <strong>Caso 2: Pago Tardío con Multa (Sofía Herrera)</strong>
+                                    <span>Depto 302 - Alícuota Mayo pagada el 20/05 (Aplica Multa Automática).</span>
+                                </button>
+                                <button class="btn btn-secondary btn-block text-left" onclick="loadCaseTemplate('manual')">
+                                    <strong>Caso 3: Validación Manual Requerida</strong>
+                                    <span>Depto 701 - Alícuota Abril con comprobante falso/inexistente en el banco.</span>
+                                </button>
+                                <button class="btn btn-secondary btn-block text-left" onclick="loadCaseTemplate('extraordinaria')">
+                                    <strong>Caso 4: Alícuota Extraordinaria (Ascensor)</strong>
+                                    <span>Depto 701 - Cuota extraordinaria ascensor.</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phone / Chat Interface -->
+                    <div class="phone-mockup">
+                        <div class="phone-header">
+                            <div class="phone-status-bar">
+                                <span>15:05</span>
+                                <div class="status-icons">
+                                    <i data-lucide="wifi" style="width:12px;height:12px;"></i>
+                                    <i data-lucide="battery" style="width:14px;height:14px;"></i>
+                                </div>
+                            </div>
+                            <div class="phone-chat-info">
+                                <div class="chat-back"><i data-lucide="chevron-left"></i></div>
+                                <div class="chat-avatar"><i data-lucide="building"></i></div>
+                                <div class="chat-contact-details">
+                                    <h4 id="chatbot-title">Asistente Administrativo Mirador</h4>
+                                    <span>En línea / Bot Inteligente</span>
+                                </div>
+                                <div class="chat-actions">
+                                    <i data-lucide="phone"></i>
+                                    <i data-lucide="video"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Body -->
+                        <div class="phone-chat-body" id="chat-messages-container">
+                            <div class="chat-date">HOY</div>
+                            <div class="message message-incoming">
+                                <p id="chatbot-intro-message">¡Hola! Soy el asistente virtual del Condominio El Mirador. Por favor, envíame los datos de tu comprobante de pago de alícuotas o expensas y adjunta tu comprobante físico (PDF o imagen) para registrarlo de inmediato.</p>
+                                <span class="message-time">12:00 PM</span>
+                            </div>
+                            <!-- Dynamic messages go here -->
+                        </div>
+
+                        <!-- Chat input area -->
+                        <form id="form-whatsapp-chat" class="phone-chat-input-bar">
+                            <div class="file-attach-btn">
+                                <label for="chat-file-upload">
+                                    <i data-lucide="paperclip"></i>
+                                </label>
+                                <input type="file" id="chat-file-upload" style="display:none;" accept="image/*,application/pdf">
+                            </div>
+                            
+                            <div class="chat-input-wrapper">
+                                <span class="file-badge" id="chat-file-badge" style="display:none;">
+                                    <i data-lucide="file"></i> <span id="file-name-text">file.jpg</span>
+                                    <button type="button" onclick="clearAttachedFile()">&times;</button>
+                                </span>
+                                <textarea id="chat-message-text" rows="1" placeholder="Escribe un mensaje de comprobante..." required></textarea>
+                            </div>
+                            
+                            <button type="submit" class="chat-send-btn" id="chat-send-btn">
+                                <i data-lucide="send"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: Configuración -->
+            <section id="tab-config" class="tab-content">
+                <div class="split-form-grid">
+                    <!-- Google Sheets settings -->
+                    <div class="form-card flex-2">
+                        <div class="form-header">
+                            <h3><i data-lucide="google"></i> Conexión con Google Sheets API</h3>
+                            <p class="card-subtitle">Conecta CondoManager a tu hoja de cálculo para sincronización automática en la nube.</p>
+                        </div>
+                        <form id="form-settings-google" class="form-layout">
+                            <div class="form-group-toggle">
+                                <label for="config-use-sheets">Habilitar sincronización con Google Sheets</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="config-use-sheets">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-spreadsheet-id">ID de la Hoja de Cálculo (Spreadsheet ID)</label>
+                                <input type="text" id="config-spreadsheet-id" placeholder="Ej. 1XyZ2wA... (Código de la URL de tu Google Sheet)">
+                            </div>
+                            <div class="form-group">
+                                <label for="config-credentials-json">Credenciales de Cuenta de Servicio (JSON Completo)</label>
+                                <textarea id="config-credentials-json" rows="8" placeholder="Pega el contenido JSON de tu cuenta de servicio de Google Cloud Console..."></textarea>
+                                <p class="input-helper">Las credenciales de cuenta de servicio permiten a la aplicación leer y escribir de forma segura sin autenticación manual interactiva.</p>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="testGoogleConnection()">Probar Conexión</button>
+                                <button type="submit" class="btn btn-primary">Guardar Configuración de Google</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Late fees parameters -->
+                    <div class="form-card">
+                        <div class="form-header">
+                            <h3><i data-lucide="sliders"></i> Parámetros de Alícuotas y Multas</h3>
+                        </div>
+                        <form id="form-settings-rules" class="form-layout">
+                            <div class="form-group">
+                                <label for="config-late-day">Día Límite de Pago Mensual</label>
+                                <input type="number" id="config-late-day" min="1" max="28" value="15" required>
+                                <p class="input-helper">Día máximo del mes para pagar sin multa. Los pagos posteriores tendrán un recargo.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-late-amount">Monto de la Multa ($)</label>
+                                <input type="number" id="config-late-amount" step="0.01" min="0.00" value="10.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-default-aliquot">Monto de Alícuota Mensual General ($)</label>
+                                <input type="number" id="config-default-aliquot" step="0.01" min="0.00" value="70.00" required>
+                                <p class="input-helper">Monto base cobrado mensualmente a todas las unidades por defecto.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-currency">Moneda de Visualización</label>
+                                <input type="text" id="config-currency" value="$" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-condo-name">Nombre del Condominio</label>
+                                <input type="text" id="config-condo-name" placeholder="Ej. Condominio El Mirador" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-condo-ruc">RUC / Identificación Tributaria del Condominio</label>
+                                <input type="text" id="config-condo-ruc" placeholder="Ej. 1790012345001">
+                                <p class="input-helper">RUC oficial que se imprimirá en los certificados de no adeudar y reportes financieros.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-condo-address">Dirección del Condominio</label>
+                                <input type="text" id="config-condo-address" placeholder="Ej. Av. Interoceánica Km 10.5, Quito, Ecuador">
+                                <p class="input-helper">Dirección del inmueble mostrada en certificados y encabezados de reportes.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-receipt-recipient">Destinatario del Recibo por Defecto</label>
+                                <select id="config-receipt-recipient" required>
+                                    <option value="inquilino">Inquilino (Si no tiene, Propietario)</option>
+                                    <option value="propietario">Propietario</option>
+                                </select>
+                                <p class="input-helper">Establece a nombre de quién saldrán los recibos de pago generados automáticamente por el sistema por defecto.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="config-app-mode">Modo de Ejecución del Sistema</label>
+                                <select id="config-app-mode" required>
+                                    <option value="produccion">Producción (Base de Datos Oficial: condo_manager.db)</option>
+                                    <option value="pruebas">Pruebas / Demo (Base de Datos de Test: condo_manager_test.db)</option>
+                                </select>
+                                <p class="input-helper">ATENCIÓN: Cambiar a modo Pruebas cargará una base de datos aislada para realizar simulaciones sin alterar tus datos reales.</p>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Guardar Parámetros de Reglas</button>
+                        </form>
+                    </div>
+
+                    <!-- Motor de Base de Datos Card -->
+                    <div class="form-card">
+                        <div class="form-header">
+                            <h3><i data-lucide="database"></i> Conexión de Base de Datos</h3>
+                            <p class="card-subtitle">Configura el motor de base de datos del sistema (SQLite o PostgreSQL).</p>
+                        </div>
+                        <form id="form-settings-database" class="form-layout">
+                            <div class="form-group">
+                                <label for="config-db-type">Motor de Base de Datos</label>
+                                <select id="config-db-type" required>
+                                    <option value="sqlite">SQLite (Base de datos local en archivo)</option>
+                                    <option value="postgres">PostgreSQL (Base de datos relacional externa)</option>
+                                </select>
+                            </div>
+                            <div id="settings-group-postgres" style="display: none;">
+                                <div class="form-group">
+                                    <label for="config-db-host">Servidor / Host (IP o nombre de dominio)</label>
+                                    <input type="text" id="config-db-host" placeholder="Ej. localhost o db.mi-condominio.com">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-db-port">Puerto</label>
+                                    <input type="number" id="config-db-port" value="5432">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-db-user">Usuario de BD</label>
+                                    <input type="text" id="config-db-user" placeholder="Ej. postgres">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-db-password">Contraseña de BD</label>
+                                    <input type="password" id="config-db-password" placeholder="Contraseña de acceso">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-db-name">Nombre de la Base de Datos</label>
+                                    <input type="text" id="config-db-name" placeholder="Ej. condo_manager">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-db-custom-url">URL de Conexión Personalizada (Opcional)</label>
+                                    <input type="text" id="config-db-custom-url" placeholder="Ej. postgresql://user:pass@host:port/dbname">
+                                    <p class="input-helper">Si se proporciona, se ignorarán los campos anteriores y se usará esta URL directa para conectar.</p>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Guardar Conexión de Base de Datos</button>
+                        </form>
+                    </div>
+
+                    <!-- Saldos Iniciales Card -->
+                    <div class="form-card">
+                        <div class="form-header">
+                            <h3><i data-lucide="landmark"></i> Saldos y Deudas Iniciales</h3>
+                            <p class="card-subtitle">Configura el saldo inicial de caja y registra deudas históricas por departamento.</p>
+                        </div>
+                        
+                        <!-- Saldo Inicial Banco -->
+                        <form id="form-settings-initial-balance" class="form-layout" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-glass);">
+                            <div class="form-group">
+                                <label for="config-initial-bank-balance">Saldo Inicial en Banco / Caja ($)</label>
+                                <input type="number" id="config-initial-bank-balance" step="0.01" min="0.00" value="0.00" required>
+                                <p class="input-helper">Saldo inicial con el que inicia la contabilidad bancaria.</p>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Guardar Saldo Inicial</button>
+                        </form>
+
+                        <!-- Deudas Iniciales -->
+                        <form id="form-add-initial-debt" class="form-layout">
+                            <div class="form-group">
+                                <label for="initial-debt-unit">Departamento / Unidad</label>
+                                <select id="initial-debt-unit" required>
+                                    <option value="">Selecciona Unidad</option>
+                                    <!-- Dynamic units loaded here -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="initial-debt-amount">Monto de Deuda Inicial ($)</label>
+                                <input type="number" id="initial-debt-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="initial-debt-description">Concepto / Descripción</label>
+                                <input type="text" id="initial-debt-description" value="Saldo Deudor Histórico Inicial" required>
+                            </div>
+                            <button type="submit" class="btn btn-purple btn-block">Registrar Deuda Inicial</button>
+                        </form>
+                        
+                        <!-- Listado de Deudas Iniciales -->
+                        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-glass);">
+                            <h4 style="margin-bottom: 10px; color: var(--purple); font-size: 0.95rem;">Deudas Iniciales Registradas</h4>
+                            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                                <table class="table-detailed" id="table-initial-debts" style="font-size: 0.85rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Depto</th>
+                                            <th>Monto</th>
+                                            <th>Concepto</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-initial-debts-body">
+                                        <!-- Dynamic rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Settings Card -->
+                    <div class="form-card">
+                        <div class="form-header">
+                            <h3><i data-lucide="bell"></i> Configuración de Notificaciones (Email & WhatsApp)</h3>
+                            <p class="card-subtitle">Configura los parámetros para envío real de recibos por correo y WhatsApp. Dejar vacío para Modo Simulación.</p>
+                        </div>
+                        <form id="form-settings-notifications" class="form-layout">
+                            <h4 style="margin-top: 10px; color: var(--purple);">Correo Electrónico (SMTP)</h4>
+                            <div class="form-group">
+                                <label for="config-smtp-host">Servidor SMTP</label>
+                                <input type="text" id="config-smtp-host" placeholder="Ej. smtp.gmail.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="config-smtp-port">Puerto SMTP (465 para SSL/Gmail recomendado, o 587 para TLS)</label>
+                                <input type="number" id="config-smtp-port" value="465">
+                            </div>
+                            <div class="form-group">
+                                <label for="config-smtp-user">Usuario SMTP / Correo</label>
+                                <input type="email" id="config-smtp-user" placeholder="Ej. administrador@gmail.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="config-smtp-password">Contraseña SMTP</label>
+                                <input type="password" id="config-smtp-password" placeholder="Contraseña de aplicación (16 caracteres)">
+                            </div>
+                            <div class="form-group">
+                                <label for="config-smtp-from">Remitente (From Email)</label>
+                                <input type="email" id="config-smtp-from" placeholder="Ej. Condominio El Mirador &lt;administrador@gmail.com&gt;">
+                            </div>
+                            <div style="margin: 12px 0 16px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" id="btn-test-smtp" class="btn btn-outline" style="font-size: 13px; padding: 6px 14px;">
+                                    <i data-lucide="send"></i> Probar Conexión SMTP
+                                </button>
+                                <span id="smtp-test-status" style="font-size: 13px; font-weight: 500;"></span>
+                            </div>
+
+                            <h4 style="margin-top: 20px; color: var(--blue);">Configuración de WhatsApp</h4>
+                            <div class="form-group">
+                                <label for="config-whatsapp-provider">Proveedor de WhatsApp</label>
+                                <select id="config-whatsapp-provider">
+                                    <option value="simulated">Simulador de Chat / Modo Desarrollo</option>
+                                    <option value="twilio">Twilio WhatsApp API</option>
+                                    <option value="meta">Meta Cloud API (Oficial)</option>
+                                </select>
+                            </div>
+
+                            <!-- Twilio Settings Block -->
+                            <div id="settings-group-twilio" style="display: none;">
+                                <h5 style="margin-top: 15px; margin-bottom: 10px; color: var(--blue);">Twilio API</h5>
+                                <div class="form-group">
+                                    <label for="config-twilio-sid">Twilio Account SID</label>
+                                    <input type="text" id="config-twilio-sid" placeholder="AC...">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-twilio-token">Twilio Auth Token</label>
+                                    <input type="password" id="config-twilio-token" placeholder="Tu Auth Token de Twilio">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-twilio-from">Número de WhatsApp Twilio</label>
+                                    <input type="text" id="config-twilio-from" placeholder="Ej. whatsapp:+14155238886">
+                                </div>
+                            </div>
+
+                            <!-- Meta WhatsApp Settings Block -->
+                            <div id="settings-group-meta" style="display: none;">
+                                <h5 style="margin-top: 15px; margin-bottom: 10px; color: var(--blue);">Meta Cloud API</h5>
+                                <div class="form-group">
+                                    <label for="config-meta-token">Meta Graph API Token</label>
+                                    <input type="password" id="config-meta-token" placeholder="Token de acceso (EAAG...)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-meta-phone-id">Identificador de Número de Teléfono (Phone Number ID)</label>
+                                    <input type="text" id="config-meta-phone-id" placeholder="Ej. 10472658932145">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-meta-waba-id">ID de Cuenta de WhatsApp Business (WABA ID)</label>
+                                    <input type="text" id="config-meta-waba-id" placeholder="Ej. 29487563124859">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-meta-verify-token">Token de Verificación del Webhook (Verify Token)</label>
+                                    <input type="text" id="config-meta-verify-token" placeholder="Ej. CondominioMiradorVerifyToken123">
+                                    <p class="input-helper">Usa este token cuando configures el webhook en el panel de desarrolladores de Meta. La URL de tu webhook será: <code>https://[tu_dominio]/api/whatsapp/meta-webhook</code></p>
+                                </div>
+                            </div>
+
+
+                            <button type="submit" class="btn btn-primary btn-block">Guardar Configuración de Notificaciones</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Google Sheets Instruction Guide -->
+                <div class="table-card instruction-guide-card" style="margin-top: 25px;">
+                    <div class="form-header">
+                        <h3>Guía Rápida para configurar Google Sheets</h3>
+                    </div>
+                    <div class="instruction-content">
+                        <ol>
+                            <li>Crea una nueva hoja de cálculo vacía en tu cuenta personal de Google Drive.</li>
+                            <li>Copia el **Spreadsheet ID** de la URL de tu navegador: `https://docs.google.com/spreadsheets/d/<u>[ESTE_ES_EL_ID]</u>/edit`.</li>
+                            <li>Ve a <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>, crea un proyecto, habilita la **Google Sheets API** y crea una **Cuenta de Servicio** en IAM.</li>
+                            <li>Crea y descarga una llave en formato **JSON** para esa Cuenta de Servicio. Abre el archivo descargado y copia el contenido completo en la sección superior de Configuración.</li>
+                            <li>**IMPORTANTE**: Copia el correo electrónico de la Cuenta de Servicio (ej. `mi-cuenta@proyecto.iam.gserviceaccount.com`) y comparte tu hoja de cálculo con este correo dándole permisos de **Editor** en Google Sheets.</li>
+                            <li>Activa la casilla "Habilitar sincronización con Google Sheets" y guarda la configuración. El sistema creará automáticamente las pestañas necesarias con la estructura predefinida.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Directiva Card -->
+                <div class="form-card" style="margin-top: 25px;">
+                    <div class="form-header">
+                        <h3><i data-lucide="users"></i> Miembros de la Directiva</h3>
+                        <p class="card-subtitle">Registra los miembros de la directiva y sus cargos. Si la exoneración de la directiva está activa, no se les generarán ni cobrarán alícuotas.</p>
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-glass);">
+                        <input type="checkbox" id="config-exonerate-directiva" style="width: auto; margin: 0;">
+                        <label for="config-exonerate-directiva" style="margin: 0; font-weight: 500;">Exonerar cobro de Alícuotas a miembros de la Directiva (Regla Activa)</label>
+                    </div>
+                    
+                    <div class="split-form-grid" style="grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 15px;">
+                        <form id="form-add-board-member" class="form-layout" style="padding-right: 20px; border-right: 1px solid var(--border-glass);">
+                            <div class="form-group">
+                                <label for="board-unit">Departamento</label>
+                                <select id="board-unit" required>
+                                    <option value="" disabled selected>Selecciona Departamento...</option>
+                                    <!-- Dynamic units loaded here -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="board-name">Nombre Completo</label>
+                                <input type="text" id="board-name" placeholder="Ej. Juan Pérez" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="board-role">Cargo</label>
+                                <select id="board-role" required>
+                                    <option value="" disabled selected>Selecciona Cargo...</option>
+                                    <option value="Presidente">Presidente</option>
+                                    <option value="Vicepresidente">Vicepresidente (Opcional)</option>
+                                    <option value="Secretario/a">Secretario/a</option>
+                                    <option value="Tesorero">Tesorero</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Agregar a Directiva</button>
+                        </form>
+
+                        <div class="table-responsive">
+                            <table class="table-detailed" id="table-board-members">
+                                <thead>
+                                    <tr>
+                                        <th>Depto</th>
+                                        <th>Nombre</th>
+                                        <th>Cargo</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notification Logs / Bitácora de Envíos -->
+                <div class="table-card" style="margin-top: 25px;">
+                    <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3><i data-lucide="history"></i> Bitácora de Envíos y Notificaciones</h3>
+                            <p class="card-subtitle">Registro cronológico de recibos enviados por correo electrónico y WhatsApp (reales y simulados).</p>
+                        </div>
+                        <button class="btn btn-secondary-sm" onclick="loadNotificationLogs()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Actualizar Logs</button>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                        <table class="table-detailed" id="table-notification-logs">
+                            <thead>
+                                <tr>
+                                    <th>Fecha / Hora</th>
+                                    <th>Unidad</th>
+                                    <th>Destinatario</th>
+                                    <th>Canal</th>
+                                    <th>Destino</th>
+                                    <th>Tipo de Envío</th>
+                                    <th>Estado</th>
+                                    <th>Detalles</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic logs loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: Admins (visible for Superadmin only) -->
+            <section id="tab-admins" class="tab-content">
+                <div class="split-form-grid">
+                    <!-- Register Admin Form -->
+                    <div class="form-card">
+                        <div class="form-header">
+                            <h3><i data-lucide="user-plus"></i> Registrar Nuevo Administrador</h3>
+                            <p class="card-subtitle">Crea una cuenta administrativa para gestionar el condominio.</p>
+                        </div>
+                        <form id="form-register-admin" class="form-layout" onsubmit="registerAdmin(event)">
+                            <div class="form-group">
+                                <label for="admin-name">Nombre Completo</label>
+                                <input type="text" id="admin-name" placeholder="Ej. Pedro Pérez" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="admin-cedula">Cédula de Identidad</label>
+                                <input type="text" id="admin-cedula" placeholder="Ej. 172345678" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="admin-email">Correo Electrónico</label>
+                                <input type="email" id="admin-email" placeholder="Ej. pedro@admin.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="admin-password">Contraseña Inicial Permanente</label>
+                                <input type="password" id="admin-password" placeholder="Ingresa contraseña" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Registrar Administrador</button>
+                        </form>
+                    </div>
+
+                    <!-- Admins List -->
+                    <div class="table-card flex-2">
+                        <div class="form-header">
+                            <h3>Administradores Registrados</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table-detailed" id="table-admins-list">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Cédula</th>
+                                        <th>Correo Electrónico</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: Mis Finanzas (visible for Condomino only) -->
+            <section id="tab-mis-finanzas" class="tab-content">
+                <!-- Certificate Download Panel -->
+                <div class="form-card" id="cert-download-panel" style="margin-bottom: 20px; padding: 20px; border-radius: 12px; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 10px; color: #a5b4fc;">
+                                <i data-lucide="award"></i> Certificado de No Adeudar
+                            </h3>
+                            <p id="cert-panel-status-text" class="card-subtitle" style="margin-top: 6px; font-size: 0.9rem; color: #cbd5e1;">Verificando tu estado de cuenta...</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-download-cert" disabled onclick="downloadMyCertificate()" style="padding: 10px 20px;">
+                            <i data-lucide="download-cloud" style="width:16px;height:16px;"></i> Descargar Certificado PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Condomino Aliquots & Charges Table -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>Detalle de Mis Pagos y Obligaciones</h3>
+                        <p class="card-subtitle">Consulta el historial de alícuotas mensuales y cargos extraordinarios asignados a tu departamento.</p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table-detailed" id="table-my-obligations">
+                            <thead>
+                                <tr>
+                                    <th>Concepto / Mes</th>
+                                    <th>Monto Base</th>
+                                    <th>Recargo / Multa</th>
+                                    <th>Monto Total</th>
+                                    <th>Fecha Pago</th>
+                                    <th>Referencia Banco</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for Manual Validation confirmation -->
+    <div id="modal-reconcile-manual" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Aprobación Manual de Depósito</h3>
+                <span class="close-btn" onclick="closeManualValidationModal()">&times;</span>
+            </div>
+            <form id="form-reconcile-manual" class="form-layout">
+                <input type="hidden" id="modal-item-id">
+                <input type="hidden" id="modal-item-type">
+                
+                <div class="modal-info-bar">
+                    <p>Vas a validar manualmente el pago para la unidad: <strong id="modal-text-unit"></strong></p>
+                    <p>Mes correspondiente: <strong id="modal-text-month"></strong></p>
+                    <p>Monto de la Alícuota: <strong id="modal-text-amount"></strong></p>
+                </div>
+                
+                
+                <div class="form-group">
+                    <label for="modal-input-amount">Monto Depositado / Recibido ($)</label>
+                    <input type="number" id="modal-input-amount" step="0.01" min="0.01" required>
+                    <p class="input-helper">Si el monto depositado es menor al debido, se registrará como abono (pago parcial). Si es mayor, el remanente se aplicará a la deuda histórica.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modal-input-reference">Referencia de Transferencia Bancaria</label>
+                    <input type="text" id="modal-input-reference" placeholder="Ingresa la referencia física (ej. 987654)" required>
+                    <p class="input-helper">Si existe una transacción bancaria equivalente, puedes seleccionarla en el banco o registrar la referencia aquí para vincularla.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modal-input-payment-date">Fecha de Pago Autorizada</label>
+                    <input type="date" id="modal-input-payment-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="modal-input-late-fee">Multa a Aplicar ($)</label>
+                    <input type="number" id="modal-input-late-fee" step="0.01" value="0.00" required>
+                    <p class="input-helper">Puedes cambiar este valor si decides condonar la multa o aplicar un recargo específico.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modal-input-recipient">Emitir Recibo a Nombre de</label>
+                    <select id="modal-input-recipient" required>
+                        <option value="inquilino">Inquilino (Por Defecto)</option>
+                        <option value="propietario">Propietario / Dueño</option>
+                    </select>
+                    <p class="input-helper">Si seleccionas Inquilino y la unidad no cuenta con uno registrado, el recibo se emitirá a nombre del propietario.</p>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeManualValidationModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Aprobar Pago y Generar Recibo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Modal for Add/Edit Department -->
+    <div id="modal-add-unit" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="department-form-title"><i data-lucide="home"></i> Registrar Departamento</h3>
+                <span class="close-btn" onclick="closeModal('modal-add-unit')">&times;</span>
+            </div>
+            <form id="form-add-unit" class="form-layout">
+                <div class="form-group">
+                    <label for="unit-id">Número de Departamento</label>
+                    <input type="text" id="unit-id" placeholder="Ej. 101, 701" required>
+                </div>
+
+                <div class="modal-form-grid-2col">
+                    <div class="form-column">
+                        <h4 class="form-section-title"><i data-lucide="user"></i> Propietario</h4>
+                        <div class="form-group">
+                            <label for="unit-owner">Nombre del Propietario</label>
+                            <input type="text" id="unit-owner" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="unit-cedula-owner">Cédula Propietario</label>
+                            <input type="text" id="unit-cedula-owner" placeholder="Ej. 171391685" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="unit-phone1">Teléfono Propietario</label>
+                            <input type="text" id="unit-phone1" placeholder="Ej. 0987654321">
+                        </div>
+                        <div class="form-group">
+                            <label for="unit-email1">Email Propietario</label>
+                            <input type="email" id="unit-email1" placeholder="propietario@email.com">
+                        </div>
+                    </div>
+
+                    <div class="form-column">
+                        <h4 class="form-section-title"><i data-lucide="users"></i> Inquilino</h4>
+                        <div class="form-group">
+                            <label for="unit-tenant">Nombre del Inquilino (Opcional)</label>
+                            <input type="text" id="unit-tenant" placeholder="Nombre completo">
+                        </div>
+                        <div class="form-group">
+                            <label for="unit-cedula-tenant">Cédula Inquilino</label>
+                            <input type="text" id="unit-cedula-tenant" placeholder="Ej. 171391686">
+                        </div>
+                        <div class="form-group">
+                            <label for="unit-phone2">Teléfono Inquilino</label>
+                            <input type="text" id="unit-phone2" placeholder="Ej. 0981234567">
+                        </div>
+                        <div class="form-group">
+                            <label for="unit-email2">Email Inquilino</label>
+                            <input type="email" id="unit-email2" placeholder="inquilino@email.com">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label for="unit-receipt-recipient">Destinatario del Recibo de Pago</label>
+                    <select id="unit-receipt-recipient" required>
+                        <option value="general">Tomar Configuración General</option>
+                        <option value="inquilino">Inquilino (Si no tiene, Propietario)</option>
+                        <option value="propietario">Propietario</option>
+                    </select>
+                    <p class="input-helper">Define de forma particular para este departamento a nombre de quién saldrán sus recibos de pago, o selecciona usar la configuración general del condominio.</p>
+                </div>
+
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" id="btn-cancel-edit-unit" class="btn btn-secondary" style="display:none;" onclick="cancelUnitEdit()">Cancelar</button>
+                    <button type="submit" id="btn-submit-unit" class="btn btn-primary flex-1">Guardar Departamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Add Expense -->
+    <div id="modal-add-expense" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="plus-circle"></i> <span id="modal-expense-title">Registrar Nuevo Gasto</span></h3>
+                <span class="close-btn" onclick="closeModal('modal-add-expense')">&times;</span>
+            </div>
+            <form id="form-add-expense" class="form-layout">
+                <div class="form-group">
+                    <label for="expense-date">Fecha del Gasto</label>
+                    <input type="date" id="expense-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="expense-category">Categoría</label>
+                    <select id="expense-category" required>
+                        <option value="Servicios">Servicios Básicos (Luz/Agua)</option>
+                        <option value="Limpieza">Limpieza y Saneamiento</option>
+                        <option value="Mantenimiento">Mantenimiento de Áreas</option>
+                        <option value="Seguridad">Seguridad y Monitoreo</option>
+                        <option value="Administración">Honorarios y Admin</option>
+                        <option value="Otros">Otros Egresos</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="expense-amount">Monto ($)</label>
+                    <input type="number" id="expense-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="expense-description">Descripción / Detalle</label>
+                    <textarea id="expense-description" rows="3" placeholder="Detalle del gasto realizado..." required></textarea>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-expense')">Cancelar</button>
+                    <button type="submit" id="btn-submit-expense" class="btn btn-primary flex-1">Registrar Gasto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Add Other Income -->
+    <div id="modal-add-other-income" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="plus-circle"></i> <span id="modal-other-income-title">Registrar Otro Ingreso (General)</span></h3>
+                <span class="close-btn" onclick="closeModal('modal-add-other-income')">&times;</span>
+            </div>
+            <form id="form-add-other-income" class="form-layout">
+                <input type="hidden" id="other-income-reference" value="">
+                <div class="form-group">
+                    <label for="other-income-date">Fecha del Ingreso</label>
+                    <input type="date" id="other-income-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="other-income-concept">Concepto / Detalle</label>
+                    <input type="text" id="other-income-concept" placeholder="Ej. Intereses de Cuenta, Alquiler de áreas comunes..." required>
+                </div>
+                <div class="form-group">
+                    <label for="other-income-amount">Monto ($)</label>
+                    <input type="number" id="other-income-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-other-income')">Cancelar</button>
+                    <button type="submit" id="btn-submit-other-income" class="btn btn-primary flex-1">Registrar Ingreso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Add Charge -->
+    <div id="modal-add-charge" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="alert-triangle"></i> Crear Cargo Extraordinario o Multa</h3>
+                <span class="close-btn" onclick="closeModal('modal-add-charge')">&times;</span>
+            </div>
+            <form id="form-add-charge" class="form-layout">
+                <div class="form-group">
+                    <label for="charge-unit">Departamento / Unidad</label>
+                    <select id="charge-unit" required>
+                        <option value="">Selecciona Unidad</option>
+                        <!-- Dynamic units loaded here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="charge-type">Tipo de Cobro</label>
+                    <select id="charge-type" required>
+                        <option value="Cuota Extraordinaria">Alícuota / Cuota Extraordinaria</option>
+                        <option value="Multa">Multa de Convivencia</option>
+                        <option value="Expensa Extra">Expensa Extraordinaria</option>
+                        <option value="Otros">Otro Cobro Adicional</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="charge-amount">Monto ($)</label>
+                    <input type="number" id="charge-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="charge-description">Concepto / Descripción</label>
+                    <textarea id="charge-description" rows="3" placeholder="Motivo del cargo adicional..." required></textarea>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-charge')">Cancelar</button>
+                    <button type="submit" class="btn btn-purple flex-1">Emitir Cargo Adicional</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Modal for Edit Initial Debt / Additional Charge -->
+    <div id="modal-edit-charge" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="edit"></i> Editar Cargo Adicional / Referencia</h3>
+                <span class="close-btn" onclick="closeModal('modal-edit-charge')">&times;</span>
+            </div>
+            <form id="form-edit-charge" class="form-layout">
+                <input type="hidden" id="edit-charge-id">
+                <div class="form-group">
+                    <label for="edit-charge-unit">Departamento / Unidad</label>
+                    <input type="text" id="edit-charge-unit" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="edit-charge-amount">Monto ($)</label>
+                    <input type="number" id="edit-charge-amount" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-charge-description">Concepto / Descripción</label>
+                    <input type="text" id="edit-charge-description" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-charge-reference">Referencia Bancaria (Comprobante / Depósito)</label>
+                    <input type="text" id="edit-charge-reference" placeholder="Ej. 171391685 o DEP-99881">
+                    <p class="input-helper">Si la referencia coincide exactamente con una transacción del estado de cuenta, <strong>se conciliará automáticamente</strong>.</p>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-charge')">Cancelar</button>
+                    <button type="submit" class="btn btn-purple flex-1">Guardar y Conciliar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Edit Aliquot and Bank Reference -->
+    <div id="modal-edit-aliquot" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="edit-3"></i> Editar Alícuota / Referencia Bancaria</h3>
+                <span class="close-btn" onclick="closeModal('modal-edit-aliquot')">&times;</span>
+            </div>
+            <form id="form-edit-aliquot" class="form-layout">
+                <input type="hidden" id="edit-aliquot-id">
+                <div class="form-group">
+                    <label for="edit-aliquot-unit">Departamento / Unidad</label>
+                    <input type="text" id="edit-aliquot-unit" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="edit-aliquot-period">Mes / Período</label>
+                    <input type="text" id="edit-aliquot-period" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="edit-aliquot-amount">Monto de Alícuota ($)</label>
+                    <input type="number" id="edit-aliquot-amount" step="0.01" min="0.00" required>
+                    <p class="input-helper">El monto no se puede modificar si la alícuota ya ha sido pagada.</p>
+                </div>
+                <div class="form-group">
+                    <label for="edit-aliquot-reference">Referencia Bancaria (Número de Transferencia / Documento)</label>
+                    <input type="text" id="edit-aliquot-reference" placeholder="Ej. 171391685 o 987654">
+                    <p class="input-helper">Al guardar, si la referencia coincide exactamente con una transacción del estado de cuenta, <strong>se conciliará automáticamente</strong> y se emitirá el recibo oficial.</p>
+                </div>
+                <div class="form-group">
+                    <label for="edit-aliquot-late-fee">Multa por Mora / Recargo ($)</label>
+                    <input type="number" id="edit-aliquot-late-fee" step="0.01" min="0.00" value="0.00">
+                    <p class="input-helper">Fija en $0.00 para exonerar o no aplicar multa al conciliar este depósito.</p>
+                </div>
+                <div class="form-group">
+                    <label for="edit-aliquot-payment-date">Fecha de Pago (Opcional)</label>
+                    <input type="date" id="edit-aliquot-payment-date">
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-aliquot')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary flex-1">Guardar y Conciliar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Edit Bank Transaction -->
+    <div id="modal-edit-bank-transaction" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="edit-3"></i> Editar Transacción Bancaria</h3>
+                <span class="close-btn" onclick="closeModal('modal-edit-bank-transaction')">&times;</span>
+            </div>
+            <form id="form-edit-bank-transaction" class="form-layout">
+                <input type="hidden" id="edit-bank-old-reference">
+                <div class="form-group">
+                    <label for="edit-bank-date">Fecha Transacción</label>
+                    <input type="date" id="edit-bank-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-bank-reference">Número Referencia (ID Transferencia / Documento)</label>
+                    <input type="text" id="edit-bank-reference" placeholder="Ej. 171391685" required>
+                    <p class="input-helper">Al guardar, si esta referencia coincide con una alícuota o cargo pendiente, <strong>se conciliará automáticamente</strong>.</p>
+                </div>
+                <div class="form-group">
+                    <label for="edit-bank-amount">Monto Recibido ($)</label>
+                    <input type="number" id="edit-bank-amount" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-bank-detail">Detalle / Concepto Banco</label>
+                    <input type="text" id="edit-bank-detail" required>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-bank-transaction')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary flex-1">Guardar y Conciliar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Upload Receipt Manual -->
+    <div id="modal-upload-receipt-manual" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="receipt"></i> Cargar Comprobante Manual</h3>
+                <span class="close-btn" onclick="closeModal('modal-upload-receipt-manual')">&times;</span>
+            </div>
+            <form id="form-upload-receipt-manual" class="form-layout">
+                <div class="form-group">
+                    <label for="receipt-manual-unit">Departamento / Unidad</label>
+                    <select id="receipt-manual-unit" required>
+                        <option value="">Selecciona Unidad</option>
+                        <!-- Dynamic units loaded here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="receipt-manual-file">Comprobante Físico (PDF/Imagen)</label>
+                    <input type="file" id="receipt-manual-file" accept="image/*,application/pdf">
+                </div>
+                <div class="form-group">
+                    <label for="receipt-manual-text">Texto del Mensaje de WhatsApp</label>
+                    <textarea id="receipt-manual-text" rows="3" placeholder="Pega el mensaje recibido (ej. Departamento: 701, Mes: Abril...)" required></textarea>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-upload-receipt-manual')">Cancelar</button>
+                    <button type="submit" class="btn btn-purple flex-1">Procesar Comprobante</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Add Bank Transaction -->
+    <div id="modal-add-bank" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="badge-plus"></i> Registrar Movimiento Bancario</h3>
+                <span class="close-btn" onclick="closeModal('modal-add-bank')">&times;</span>
+            </div>
+            <form id="form-add-bank" class="form-layout">
+                <div class="form-group">
+                    <label for="bank-date">Fecha Transacción</label>
+                    <input type="date" id="bank-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="bank-reference">Número Referencia (ID Transferencia)</label>
+                    <input type="text" id="bank-reference" placeholder="Ej. 171391685 o DEP-99881" required>
+                </div>
+                <div class="form-group">
+                    <label for="bank-amount">Monto Recibido ($)</label>
+                    <input type="number" id="bank-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="bank-detail">Detalle / Concepto Banco</label>
+                    <input type="text" id="bank-detail" placeholder="Ej. TRANSF Jenny Portilla 701" required>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-bank')">Cancelar</button>
+                    <button type="submit" class="btn btn-secondary flex-1">Cargar a Banco</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Upload Bank Statement -->
+    <div id="modal-upload-statement" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="upload-cloud"></i> Cargar Estado de Cuenta</h3>
+                <span class="close-btn" onclick="closeModal('modal-upload-statement')">&times;</span>
+            </div>
+            <div class="form-layout">
+                <p class="card-subtitle" style="margin-bottom: 15px;">Sube tu estado de cuenta en formato PDF, Imagen, Excel (XLSX) o CSV.</p>
+                <div class="drag-drop-zone" id="statement-upload-zone">
+                    <i data-lucide="file-up" class="upload-icon"></i>
+                    <p class="upload-text">Arrastra el archivo aquí o haz clic para buscar</p>
+                    <span class="upload-hint">Formatos: PDF, PNG, JPG, JPEG, XLSX, CSV</span>
+                    <input type="file" id="statement-file-input" style="display:none;" accept="image/*,application/pdf,.csv,.xlsx">
+                </div>
+                <div class="file-info-bar" id="statement-file-info" style="display:none; margin-top:15px; justify-content: space-between; align-items: center;">
+                    <div class="file-name"><i data-lucide="file"></i> <span id="statement-file-name-text">nombre_archivo.xlsx</span></div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-secondary-sm" onclick="clearStatementFile()">&times;</button>
+                        <button type="button" class="btn btn-primary" id="btn-process-statement" style="padding: 6px 12px; font-size: 0.8rem;" onclick="uploadStatementFile()">Procesar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Admin Certificate Emission -->
+    <div id="modal-admin-certificate" class="modal">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3><i data-lucide="award"></i> Emitir Certificado de No Adeudar</h3>
+                <span class="close-btn" onclick="closeModal('modal-admin-certificate')">&times;</span>
+            </div>
+            <div class="form-layout" style="padding: 10px 0;">
+                <div class="form-group">
+                    <label for="cert-admin-unit-select">Selecciona el Departamento</label>
+                    <select id="cert-admin-unit-select" class="form-control" onchange="checkAdminCertStatus(this.value)">
+                        <option value="">-- Selecciona Departamento --</option>
+                    </select>
+                </div>
+                
+                <div id="cert-admin-status-box" style="margin-top: 15px; display: none;"></div>
+
+                <div class="form-actions" style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-admin-certificate')">Cerrar</button>
+                    <button type="button" id="btn-admin-download-cert" class="btn btn-primary flex-1" disabled onclick="downloadAdminCertificate()">
+                        <i data-lucide="download-cloud"></i> Descargar Certificado (PDF)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="logo-icon"><i data-lucide="building-2"></i></div>
+                <h2>CondoManager</h2>
+                <p id="login-subtitle">Ingresa tus credenciales para acceder al sistema</p>
+            </div>
+            
+            <!-- Login Alert Box -->
+            <div id="login-alert-box" class="login-alert-box" style="display:none;"></div>
+            
+            <!-- Tab Selector for Login/Reset -->
+            <div class="login-tabs" id="login-form-tabs" style="display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--border-glass);">
+                <button type="button" class="login-tab-btn active" id="btn-tab-login" onclick="setLoginMode('login')">Ingresar</button>
+                <button type="button" class="login-tab-btn" id="btn-tab-recover" onclick="setLoginMode('recover')">Recuperar Clave</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="form-login" class="form-layout" onsubmit="handleLoginSubmit(event)">
+                <div class="form-group">
+                    <label for="login-role">Rol / Tipo de Acceso</label>
+                    <select id="login-role" required onchange="onLoginRoleChange()">
+                        <option value="superadmin" selected>Superadministrador</option>
+                        <option value="admin">Administrador</option>
+                        <option value="owner">Condómino Propietario</option>
+                        <option value="tenant">Condómino Inquilino</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="login-cedula">Cédula de Identidad</label>
+                    <input type="text" id="login-cedula" placeholder="Ej. 171391685" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-email">Correo Electrónico</label>
+                    <input type="email" id="login-email" placeholder="Ej. juan@gmail.com" required>
+                </div>
+                <div class="form-group" id="login-password-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label for="login-password" style="margin-bottom: 0;">Contraseña (o PIN temporal)</label>
+                        <a href="javascript:void(0)" onclick="setLoginMode('recover')" style="color: var(--primary, #6366f1); font-size: 0.8rem; text-decoration: none; cursor: pointer;">
+                            ¿Olvidó su contraseña?
+                        </a>
+                    </div>
+                    <input type="password" id="login-password" placeholder="Tu contraseña" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">Acceder al Sistema</button>
+            </form>
+            
+            <!-- Recover Form (hidden by default) -->
+            <form id="form-recover" class="form-layout" style="display:none;" onsubmit="handleRecoverSubmit(event)">
+                <div class="form-group">
+                    <label for="recover-role">Rol / Tipo de Acceso</label>
+                    <select id="recover-role" required onchange="onRecoverRoleChange()">
+                        <option value="superadmin" selected>Superadministrador</option>
+                        <option value="admin">Administrador</option>
+                        <option value="owner">Condómino Propietario</option>
+                        <option value="tenant">Condómino Inquilino</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="recover-cedula">Cédula de Identidad</label>
+                    <input type="text" id="recover-cedula" placeholder="Ej. 171391685" required>
+                </div>
+                <div class="form-group">
+                    <label for="recover-email">Correo Electrónico</label>
+                    <input type="email" id="recover-email" placeholder="Ej. juan@gmail.com" required>
+                </div>
+                <button type="submit" class="btn btn-purple btn-block" style="margin-top: 10px;">Solicitar Clave Temporal</button>
+                <p class="input-helper" style="text-align: center; margin-top: 8px;">Se enviará una clave temporal de un solo uso a tu correo registrado.</p>
+                <div style="text-align: center; margin-top: 12px;">
+                    <a href="javascript:void(0)" onclick="setLoginMode('login')" style="color: var(--text-muted, #94a3b8); font-size: 0.85rem; text-decoration: none; cursor: pointer;">
+                        &larr; Volver al inicio de sesión
+                    </a>
+                </div>
+            </form>
+
+            <!-- Reset Password Form (hidden by default) -->
+            <form id="form-reset-password" class="form-layout" style="display:none;" onsubmit="handleResetSubmit(event)">
+                <input type="hidden" id="reset-cedula">
+                <input type="hidden" id="reset-role">
+                <div class="form-group">
+                    <label for="reset-temp-pin">Clave Temporal (PIN recibido)</label>
+                    <input type="text" id="reset-temp-pin" placeholder="Ingresa el PIN de 6 dígitos" required>
+                </div>
+                <div class="form-group">
+                    <label for="reset-new-password">Nueva Contraseña Permanente</label>
+                    <input type="password" id="reset-new-password" placeholder="Mínimo 6 caracteres" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">Establecer Nueva Contraseña</button>
+                <div style="text-align: center; margin-top: 12px;">
+                    <a href="javascript:void(0)" onclick="setLoginMode('login')" style="color: var(--text-muted, #94a3b8); font-size: 0.85rem; text-decoration: none; cursor: pointer;">
+                        &larr; Cancelar y volver al inicio de sesión
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JS File -->
+    <script src="/static/app.js?v=9.6"></script>
+</body>
+</html>

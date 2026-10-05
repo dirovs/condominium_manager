@@ -1,0 +1,15 @@
+=== RUNNING META WEBHOOK TESTS ===
+test_process_webhook_incoming_text_message (test_meta_webhook.TestMetaWebhook.test_process_webhook_incoming_text_message) ... ok
+test_verify_webhook_failure (test_meta_webhook.TestMetaWebhook.test_verify_webhook_failure) ... ok
+test_verify_webhook_success (test_meta_webhook.TestMetaWebhook.test_verify_webhook_success) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.032s
+
+OK
+
+Tests run: 3
+Errors: 0
+Failures: 0
+
+SUCCESS: All tests passed!

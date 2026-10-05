@@ -1,0 +1,23 @@
+{
+  "condo_name": "Condominio Casales San Pedro",
+  "condo_ruc": "1792345678001",
+  "condo_address": "Av. Napo y Av. Pedro Pinto G",
+  "currency": "$",
+  "default_aliquot_base": 25.0,
+  "late_fee_day": 15,
+  "late_fee_amount": 5.0,
+  "db_type": "postgres",
+  "db_host": "localhost",
+  "db_port": 5432,
+  "db_name": "condo_manager",
+  "db_user": "admin_db_condo",
+  "db_password": "TU_PASSWORD_AQUI",
+  "db_custom_url": "",
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 465,
+  "smtp_user": "sanpedro.torre6@gmail.com",
+  "smtp_password": "tu_contrase\u00f1a_de_aplicacion",
+  "smtp_from": "sanpedro.torre6@gmail.com",
+  "app_mode": "produccion",
+  "receipt_recipient_type": "inquilino"
+}

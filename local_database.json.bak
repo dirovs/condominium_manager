@@ -1,0 +1,663 @@
+{
+  "units": [
+    {
+      "id": "101",
+      "owner": "Carlos Mendoza",
+      "aliquot_base": 70.0,
+      "phone1": "099111222",
+      "email1": "carlos@test.com",
+      "tenant": "Maria Silva",
+      "phone2": "098333444",
+      "email2": "maria@test.com"
+    },
+    {
+      "id": "102",
+      "owner": "Juan Perez",
+      "aliquot_base": 70.0,
+      "phone1": "099222333",
+      "email1": "juan@test.com",
+      "tenant": "",
+      "phone2": "",
+      "email2": ""
+    },
+    {
+      "id": "201",
+      "owner": "Luis Torres",
+      "aliquot_base": 60.0
+    },
+    {
+      "id": "202",
+      "owner": "Maria Elena Castro",
+      "aliquot_base": 60.0
+    },
+    {
+      "id": "301",
+      "owner": "Jorge Villalba",
+      "aliquot_base": 50.0
+    },
+    {
+      "id": "302",
+      "owner": "Sofia Herrera",
+      "aliquot_base": 50.0
+    },
+    {
+      "id": "701",
+      "owner": "Jenny Portilla Bustamante",
+      "aliquot_base": 70.0
+    }
+  ],
+  "aliquots": [
+    {
+      "id": "101-2026-04",
+      "unit": "101",
+      "month": "Abril",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-04-12",
+      "reference": "DEP-77382",
+      "status": "Pagado"
+    },
+    {
+      "id": "102-2026-04",
+      "unit": "102",
+      "month": "Abril",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 10.0,
+      "payment_date": "2026-04-20",
+      "reference": "987654",
+      "status": "Pagado"
+    },
+    {
+      "id": "201-2026-04",
+      "unit": "201",
+      "month": "Abril",
+      "year": 2026,
+      "amount": 60.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-04-05",
+      "reference": "DEP-99812",
+      "status": "Pagado"
+    },
+    {
+      "id": "202-2026-04",
+      "unit": "202",
+      "month": "Abril",
+      "year": 2026,
+      "amount": 60.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-04-10",
+      "reference": "DEP-44910",
+      "status": "Pagado"
+    },
+    {
+      "id": "301-2026-04",
+      "unit": "301",
+      "month": "Abril",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-04-14",
+      "reference": "DEP-11223",
+      "status": "Pagado"
+    },
+    {
+      "id": "302-2026-04",
+      "unit": "302",
+      "month": "Abril",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-04-11",
+      "reference": "DEP-88321",
+      "status": "Pagado"
+    },
+    {
+      "id": "701-2026-04",
+      "unit": "701",
+      "month": "Abril",
+      "year": 2026,
+      "amount": 70.0,
+      "late_fee": 10.0,
+      "payment_date": "2026-06-17",
+      "reference": "987654",
+      "status": "Validación Manual",
+      "comprobante_url": "/static/uploads/701/2026/Abril/comprobante_1781744786.png"
+    },
+    {
+      "id": "101-2026-05",
+      "unit": "101",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-05-12",
+      "reference": "DEP-78392",
+      "status": "Pagado"
+    },
+    {
+      "id": "102-2026-05",
+      "unit": "102",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente"
+    },
+    {
+      "id": "201-2026-05",
+      "unit": "201",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 60.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-05-10",
+      "reference": "DEP-99881",
+      "status": "Pagado"
+    },
+    {
+      "id": "202-2026-05",
+      "unit": "202",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 60.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente"
+    },
+    {
+      "id": "301-2026-05",
+      "unit": "301",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente"
+    },
+    {
+      "id": "302-2026-05",
+      "unit": "302",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 10.0,
+      "payment_date": "2026-06-17",
+      "reference": "987654",
+      "status": "Validación Manual",
+      "comprobante_url": "/static/uploads/302/2026/Mayo/comprobante_1781744777.jpg"
+    },
+    {
+      "id": "701-2026-05",
+      "unit": "701",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 70.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-06-16",
+      "reference": "MAN-1781575008",
+      "status": "Pagado"
+    },
+    {
+      "id": "701-2026-Mayo",
+      "unit": "701",
+      "month": "Mayo",
+      "year": 2026,
+      "amount": 70.0,
+      "late_fee": 10.0,
+      "payment_date": "2026-06-10",
+      "reference": "DEP-99882",
+      "status": "Pagado"
+    },
+    {
+      "id": "101-2026-Julio",
+      "unit": "101",
+      "month": "Julio",
+      "year": 2026,
+      "amount": 70.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente",
+      "comprobante_url": ""
+    },
+    {
+      "id": "102-2026-Julio",
+      "unit": "102",
+      "month": "Julio",
+      "year": 2026,
+      "amount": 70.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente",
+      "comprobante_url": ""
+    },
+    {
+      "id": "201-2026-Julio",
+      "unit": "201",
+      "month": "Julio",
+      "year": 2026,
+      "amount": 60.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente",
+      "comprobante_url": ""
+    },
+    {
+      "id": "202-2026-Julio",
+      "unit": "202",
+      "month": "Julio",
+      "year": 2026,
+      "amount": 60.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente",
+      "comprobante_url": ""
+    },
+    {
+      "id": "301-2026-Julio",
+      "unit": "301",
+      "month": "Julio",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente",
+      "comprobante_url": ""
+    },
+    {
+      "id": "302-2026-Julio",
+      "unit": "302",
+      "month": "Julio",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 0.0,
+      "payment_date": "",
+      "reference": "",
+      "status": "Pendiente",
+      "comprobante_url": ""
+    },
+    {
+      "id": "701-2026-Julio",
+      "unit": "701",
+      "month": "Julio",
+      "year": 2026,
+      "amount": 70.0,
+      "late_fee": 0.0,
+      "payment_date": "2026-06-16",
+      "reference": "MAN-1781575060",
+      "status": "Pagado",
+      "comprobante_url": "/static/uploads/701/2026/Julio/comprobante_1781575051.png"
+    },
+    {
+      "id": "701-2026-Junio",
+      "unit": "701",
+      "month": "Junio",
+      "year": 2026,
+      "amount": 50.0,
+      "late_fee": 10.0,
+      "payment_date": "2026-06-17",
+      "reference": "987654",
+      "status": "Validación Manual",
+      "comprobante_url": "/static/uploads/701/2026/Junio/comprobante_1781744753.jpg"
+    }
+  ],
+  "additional_charges": [
+    {
+      "id": "AC-1",
+      "unit": "701",
+      "type": "Multa",
+      "description": "Multa por ruidos molestos (reunión en terraza fuera de horario)",
+      "amount": 15.0,
+      "issue_date": "2026-04-10",
+      "status": "Validación Manual",
+      "payment_date": "2026-06-14",
+      "reference": "987654"
+    },
+    {
+      "id": "AC-2",
+      "unit": "102",
+      "type": "Cuota Extraordinaria",
+      "description": "Cuota extraordinaria para fondo de pintura de fachada",
+      "amount": 30.0,
+      "issue_date": "2026-05-01",
+      "status": "Pagado",
+      "payment_date": "2026-05-02",
+      "reference": "PINT-8839"
+    },
+    {
+      "id": "AC-3",
+      "unit": "202",
+      "type": "Cuota Extraordinaria",
+      "description": "Cuota extraordinaria para mantenimiento de ascensor",
+      "amount": 25.0,
+      "issue_date": "2026-05-15",
+      "status": "Pendiente",
+      "payment_date": "",
+      "reference": ""
+    }
+  ],
+  "expenses": [
+    {
+      "id": "EXP-1",
+      "date": "2026-04-05",
+      "category": "Limpieza",
+      "description": "Compra de insumos de aseo y desinfección",
+      "amount": 45.2
+    },
+    {
+      "id": "EXP-2",
+      "date": "2026-04-10",
+      "category": "Servicios",
+      "description": "Pago de energía eléctrica - Áreas comunes",
+      "amount": 115.8
+    },
+    {
+      "id": "EXP-3",
+      "date": "2026-04-12",
+      "category": "Seguridad",
+      "description": "Monitoreo mensual de cámaras de seguridad",
+      "amount": 80.0
+    },
+    {
+      "id": "EXP-4",
+      "date": "2026-05-02",
+      "category": "Administración",
+      "description": "Honorarios profesionales de administración",
+      "amount": 200.0
+    },
+    {
+      "id": "EXP-5",
+      "date": "2026-05-05",
+      "category": "Mantenimiento",
+      "description": "Reparación de cerradura de puerta principal",
+      "amount": 35.0
+    },
+    {
+      "id": "EXP-6",
+      "date": "2026-05-09",
+      "category": "Servicios",
+      "description": "Consumo de agua potable - Edificio",
+      "amount": 62.4
+    },
+    {
+      "id": "EXP-7",
+      "date": "2026-05-10",
+      "category": "Servicios",
+      "description": "Pago de energía eléctrica - Áreas comunes",
+      "amount": 121.3
+    }
+  ],
+  "bank_statement": [
+    {
+      "date": "2026-04-12",
+      "reference": "DEP-77382",
+      "amount": 50.0,
+      "detail": "DEP Carlos Mendoza Apto 101",
+      "reconciled": true
+    },
+    {
+      "date": "2026-04-20",
+      "reference": "987654",
+      "amount": 60.0,
+      "detail": "TRANSF Ana Gomez Apto 102",
+      "reconciled": true
+    },
+    {
+      "date": "2026-04-05",
+      "reference": "DEP-99812",
+      "amount": 60.0,
+      "detail": "TRANSF Luis Torres Apto 201",
+      "reconciled": true
+    },
+    {
+      "date": "2026-04-10",
+      "reference": "DEP-44910",
+      "amount": 60.0,
+      "detail": "DEP Maria Elena Castro Apto 202",
+      "reconciled": true
+    },
+    {
+      "date": "2026-04-14",
+      "reference": "DEP-11223",
+      "amount": 50.0,
+      "detail": "DEP Jorge Villalba Apto 301",
+      "reconciled": true
+    },
+    {
+      "date": "2026-04-11",
+      "reference": "DEP-88321",
+      "amount": 50.0,
+      "detail": "DEP Sofia Herrera Apto 302",
+      "reconciled": true
+    },
+    {
+      "date": "2026-04-18",
+      "reference": "171391685",
+      "amount": 70.0,
+      "detail": "TRANSF Jenny Portilla 701",
+      "reconciled": true
+    },
+    {
+      "date": "2026-05-12",
+      "reference": "DEP-78392",
+      "amount": 50.0,
+      "detail": "DEP Carlos Mendoza Apto 101",
+      "reconciled": true
+    },
+    {
+      "date": "2026-05-02",
+      "reference": "PINT-8839",
+      "amount": 30.0,
+      "detail": "TRANSF Ana Gomez Apto 102 Pintura",
+      "reconciled": true
+    },
+    {
+      "date": "2026-05-10",
+      "reference": "DEP-99881",
+      "amount": 60.0,
+      "detail": "TRANSF Luis Torres Apto 201",
+      "reconciled": true
+    },
+    {
+      "date": "2026-05-20",
+      "reference": "DEP-88401",
+      "amount": 60.0,
+      "detail": "DEP Sofia Herrera Apto 302",
+      "reconciled": true
+    },
+    {
+      "date": "2026-06-10",
+      "reference": "REF-88471",
+      "amount": 50.0,
+      "detail": "TRANSF Sofia Herrera 302 Junio",
+      "reconciled": false
+    },
+    {
+      "date": "2026-06-12",
+      "reference": "REF-22334",
+      "amount": 50.0,
+      "detail": "DEP Jorge Villalba 301",
+      "reconciled": false
+    },
+    {
+      "date": "2026-06-13",
+      "reference": "112233",
+      "amount": 50.0,
+      "detail": "TRANSF Ascensor Depto 701",
+      "reconciled": false
+    },
+    {
+      "date": "2026-06-10",
+      "reference": "DEP-99882",
+      "amount": 70.0,
+      "detail": "TRANSF Jenny Portilla 701",
+      "reconciled": true
+    }
+  ],
+  "notification_logs": [
+    {
+      "timestamp": "2026-06-14 20:54:59",
+      "unit": "101",
+      "recipient": "Carlos Mendoza (Propietario)",
+      "channel": "Email",
+      "destination": "carlos@test.com",
+      "subject": "Recibo Oficial de Pago Nº REC-AL-101-2026-Junio - Depto 101",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales SMTP configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 20:54:59",
+      "unit": "101",
+      "recipient": "Carlos Mendoza (Propietario)",
+      "channel": "WhatsApp",
+      "destination": "099111222",
+      "subject": "Recibo de Pago",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales Twilio configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 20:54:59",
+      "unit": "101",
+      "recipient": "Maria Silva (Inquilino)",
+      "channel": "Email",
+      "destination": "maria@test.com",
+      "subject": "Recibo Oficial de Pago Nº REC-AL-101-2026-Junio - Depto 101",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales SMTP configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 20:54:59",
+      "unit": "101",
+      "recipient": "Maria Silva (Inquilino)",
+      "channel": "WhatsApp",
+      "destination": "098333444",
+      "subject": "Recibo de Pago",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales Twilio configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 20:59:59",
+      "unit": "101",
+      "recipient": "Carlos Mendoza (Propietario)",
+      "channel": "Email",
+      "destination": "carlos@test.com",
+      "subject": "Recibo Oficial de Pago Nº REC-AL-101-2026-05 - Depto 101",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales SMTP configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 20:59:59",
+      "unit": "101",
+      "recipient": "Carlos Mendoza (Propietario)",
+      "channel": "WhatsApp",
+      "destination": "099111222",
+      "subject": "Recibo de Pago",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales Twilio configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 20:59:59",
+      "unit": "101",
+      "recipient": "Maria Silva (Inquilino)",
+      "channel": "Email",
+      "destination": "maria@test.com",
+      "subject": "Recibo Oficial de Pago Nº REC-AL-101-2026-05 - Depto 101",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales SMTP configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 20:59:59",
+      "unit": "101",
+      "recipient": "Maria Silva (Inquilino)",
+      "channel": "WhatsApp",
+      "destination": "098333444",
+      "subject": "Recibo de Pago",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales Twilio configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 21:00:24",
+      "unit": "102",
+      "recipient": "Juan Perez (Propietario)",
+      "channel": "Email",
+      "destination": "juan@test.com",
+      "subject": "Recibo Oficial de Pago Nº REC-AL-102-2026-04 - Depto 102",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales SMTP configuradas)."
+    },
+    {
+      "timestamp": "2026-06-14 21:00:24",
+      "unit": "102",
+      "recipient": "Juan Perez (Propietario)",
+      "channel": "WhatsApp",
+      "destination": "099222333",
+      "subject": "Recibo de Pago",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales Twilio configuradas)."
+    },
+    {
+      "timestamp": "2026-06-15 20:53:11",
+      "unit": "101",
+      "recipient": "Carlos Mendoza (Propietario)",
+      "channel": "Email",
+      "destination": "carlos@test.com",
+      "subject": "Recibo Oficial de Pago Nº REC-AL-101-2026-04 - Depto 101",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales SMTP configuradas)."
+    },
+    {
+      "timestamp": "2026-06-15 20:53:11",
+      "unit": "101",
+      "recipient": "Carlos Mendoza (Propietario)",
+      "channel": "WhatsApp",
+      "destination": "099111222",
+      "subject": "Recibo de Pago",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales Twilio configuradas)."
+    },
+    {
+      "timestamp": "2026-06-15 20:53:11",
+      "unit": "101",
+      "recipient": "Maria Silva (Inquilino)",
+      "channel": "Email",
+      "destination": "maria@test.com",
+      "subject": "Recibo Oficial de Pago Nº REC-AL-101-2026-04 - Depto 101",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales SMTP configuradas)."
+    },
+    {
+      "timestamp": "2026-06-15 20:53:11",
+      "unit": "101",
+      "recipient": "Maria Silva (Inquilino)",
+      "channel": "WhatsApp",
+      "destination": "098333444",
+      "subject": "Recibo de Pago",
+      "status": "Enviado",
+      "mode": "Simulado",
+      "details": "Modo simulación (sin credenciales Twilio configuradas)."
+    }
+  ]
+}

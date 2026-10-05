@@ -1,0 +1,33 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*.class
+venv/
+env/
+.env
+
+# Database & SQLite files
+*.db
+*.sqlite
+*.sqlite3
+condo_manager.db
+condo_manager_test.db
+condominium.db
+
+# Secrets and local credentials
+config.json
+.secret_key
+service_account.json
+google_credentials.json
+
+# Local static uploads and temporary test receipts
+static/uploads/*
+!static/uploads/.gitkeep
+static/receipts/*.pdf
+!static/receipts/.gitkeep
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
