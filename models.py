@@ -135,14 +135,14 @@ class SystemConfig(SQLModel, table=True):
     use_google_sheets: bool = Field(default=False)
     spreadsheet_id: Optional[str] = Field(default="")
     google_credentials_json: Optional[str] = Field(default="")
-    
+
     # Notifications (SMTP)
     smtp_host: Optional[str] = Field(default="")
     smtp_port: int = Field(default=587)
     smtp_user: Optional[str] = Field(default="")
     smtp_password: Optional[str] = Field(default="")
     smtp_from: Optional[str] = Field(default="")
-    
+
     # WhatsApp (Twilio / Meta)
     whatsapp_provider: str = Field(default="simulated")
     twilio_sid: Optional[str] = Field(default="")
@@ -152,7 +152,7 @@ class SystemConfig(SQLModel, table=True):
     meta_wa_phone_number_id: Optional[str] = Field(default="")
     meta_wa_verify_token: Optional[str] = Field(default="")
     meta_wa_business_account_id: Optional[str] = Field(default="")
-    
+
     # DB Engine
     db_type: str = Field(default="sqlite")
     db_host: Optional[str] = Field(default="")
@@ -161,7 +161,7 @@ class SystemConfig(SQLModel, table=True):
     db_password: Optional[str] = Field(default="")
     db_name: Optional[str] = Field(default="")
     db_custom_url: Optional[str] = Field(default="")
-    
+
     updated_at: Optional[str] = Field(default="")
 
 class InitialBalance(SQLModel, table=True):

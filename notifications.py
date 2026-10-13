@@ -760,7 +760,7 @@ Puede descargar su recibo en PDF aquí: {public_pdf_url}"""
                     "mode": "Real" if is_real_wa else "Simulado",
                     "details": "Modo simulación (sin credenciales de WhatsApp configuradas)." if not is_real_wa else "Procesando envío en segundo plano..."
                 }
-                
+
                 if is_real_wa:
                     wa_tasks.append({
                         "wa_provider": wa_provider,
@@ -771,13 +771,13 @@ Puede descargar su recibo en PDF aquí: {public_pdf_url}"""
                         "receipt_filename": receipt_filename,
                         "receipt_no": receipt_no
                     })
-                    
+
                 sm.data["notification_logs"].append(log_entry)
                 results.append(log_entry)
-                
+
         # Sync initial log entries
         sm.sync()
-        
+
         # Dispatch real network sending
         if email_tasks or wa_tasks:
             if background:
@@ -789,6 +789,6 @@ Puede descargar su recibo en PDF aquí: {public_pdf_url}"""
                 thread.start()
             else:
                 NotificationManager._dispatch_receipt_notifications(sm, email_tasks, wa_tasks, cfg)
-                
+
         return results
 

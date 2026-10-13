@@ -58,20 +58,20 @@ class ReceiptProcessor:
             "month": "",
             "year": 2026
         }
-        
+
         # Match lines with labels
         name_match = re.search(r'Nombre:\s*(.+)', text, re.IGNORECASE)
         if name_match:
             data["name"] = name_match.group(1).strip()
-            
+
         cedula_match = re.search(r'(?:Cédula|Cedula):\s*(.+)', text, re.IGNORECASE)
         if cedula_match:
             data["cedula"] = cedula_match.group(1).strip()
-            
+
         unit_match = re.search(r'(?:Departamento|Depto|Dep):\s*(\w+)', text, re.IGNORECASE)
         if unit_match:
             data["unit"] = unit_match.group(1).strip()
-            
+
         # Match month/year
         month_match = re.search(r'Mes:\s*([a-zA-ZáéíóúÁÉÍÓÚ]+)(?:\s*/\s*(\d{4}))?', text, re.IGNORECASE)
         if month_match:
@@ -85,7 +85,7 @@ class ReceiptProcessor:
                 if m in text.lower():
                     data["month"] = m.capitalize()
                     break
-        
+
         return data
 
     @staticmethod
@@ -135,22 +135,22 @@ class ReceiptProcessor:
         label_patterns = [
             r'(?:fecha\s*valor|f\.?\s*valor|fecha\s*de\s*transferencia|fecha\s*transferencia|fecha\s*de\s*pago|fecha\s*de\s*dep[oó]sito|fecha\s*dep[oó]sito|fecha\s*de\s*proceso|fecha\s*proceso|fecha\s*y\s*hora|fecha\s*emisi[oó]n|fecha|fec\.?\s*tx|fec\.?)\s*[:\s-]\s*([0-9a-zA-Z\s\/\-\.,delDE]+)',
         ]
-        
+
         candidates = []
         for pat in label_patterns:
             for m in re.finditer(pat, text, re.IGNORECASE):
                 raw = m.group(1).strip()
                 candidates.append(raw)
-                
+
         for line in text.splitlines():
             clean_l = line.strip()
             if clean_l and clean_l not in candidates:
                 candidates.append(clean_l)
-                
+
         for raw in candidates:
             if not raw:
                 continue
-                
+
             # Pattern A: Day Month Year in letters (e.g. 15 de Julio de 2026, 15-Jul-2026, 15/Julio/2026, 15.ABR.2026)
             m_let = re.search(r'\b(\d{1,2})\s*(?:de|\/|-|\.)\s*([a-zA-Z]{3,12})\s*(?:de|del|\/|-|\.)?\s*(\d{2,4})\b', raw, re.IGNORECASE)
             if m_let:
@@ -174,7 +174,7 @@ class ReceiptProcessor:
                     y = int(y_str)
                     if 1 <= d <= 31 and 1 <= mon <= 12 and 2000 <= y <= 2100:
                         return f'{y:04d}-{mon:02d}-{d:02d}'
-                        
+
             # Pattern B: Month Day, Year (e.g. Julio 15, 2026 or Jul 15 2026)
             m_let2 = re.search(r'\b([a-zA-Z]{3,12})\s*(\d{1,2})\s*(?:de|,)?\s*(\d{2,4})\b', raw, re.IGNORECASE)
             if m_let2:
@@ -208,7 +208,7 @@ class ReceiptProcessor:
                 d, m, y = int(m_dmy2.group(1)), int(m_dmy2.group(2)), int(m_dmy2.group(3)) + 2000
                 if 1 <= d <= 31 and 1 <= m <= 12:
                     return f'{y:04d}-{m:02d}-{d:02d}'
-                    
+
         return None
 
     @staticmethod
@@ -250,7 +250,7 @@ class ReceiptProcessor:
         amount = None
         reference = None
         payment_date = ReceiptProcessor.parse_receipt_date(text)
-        
+
         # 1. Search for amount: e.g. "Monto: $50.00" or "$ 60.00" or "MONTO DEPOSITADO: $50" or "S 25.00"
         amount_patterns = [
             r'\b(?:monto\s*depositado|monto\s*total|monto\s*de\s*transferencia|monto\s*transferido|monto|total\s*pagado|total\s*depositado|total|efectivo|efactivo|cantidad)\b[\.,;:\s-]*\$?\s*(?:usd)?\s*(\d+(?:[.,]\d{1,2})?)(?!\s*[-/.](?:[a-zA-Z]{3,}|20\d{2}))',
@@ -260,7 +260,7 @@ class ReceiptProcessor:
             r'(?:exitosa|transferencia)[!\s]*[\r\n]+\s*\$?\s*(\d+(?:[.,]\d{1,2})?)',
             r'\$\s*(\d+(?:[.,]\d{1,2})?)'
         ]
-        
+
         for pat in amount_patterns:
             match = re.search(pat, text, re.IGNORECASE)
             if match:
@@ -275,7 +275,7 @@ class ReceiptProcessor:
             r'\b(?:cuenta\s*(?:de\s*)?(?:origen|d[eé]bito|debitada|ahorros|corriente)|desde\s*(?:la\s*)?cuenta|de\s*(?:la\s*)?cuenta|cta\.?\s*(?:origen|d[eé]bito|debitada|ahorros|corriente)|no\.?\s*(?:de\s*)?cuenta\s*(?:de\s*)?(?:origen|d[eé]bito|debitada)?|n[°º\.]*\s*(?:de\s*)?cuenta\s*(?:de\s*)?(?:origen|d[eé]bito|debitada)?|nro\.?\s*(?:de\s*)?cuenta\s*(?:de\s*)?(?:origen|d[eé]bito|debitada)?|cuenta\s*n[°ºo\.]*)\s*[:\s#-]*([a-zA-Z0-9\*\-]+)',
             r'\b(?:cuenta\s*(?:de\s*)?(?:destino|cr[eé]dito|acreditada|beneficiario)|hacia\s*(?:la\s*)?cuenta|a\s*(?:la\s*)?cuenta|cta\.?\s*(?:destino|cr[eé]dito|acreditada|beneficiario)|no\.?\s*(?:de\s*)?cuenta\s*(?:de\s*)?(?:destino|cr[eé]dito|acreditada)?)\s*[:\s#-]*([a-zA-Z0-9\*\-]+)'
         ]
-        
+
         known_accounts = set()
         for acc_pat in account_patterns:
             for m in re.finditer(acc_pat, text, re.IGNORECASE):
@@ -290,25 +290,25 @@ class ReceiptProcessor:
         ref_patterns = [
             # Comprobante variants (N. de comprobante, N. de Comprobante, N.de comprobante, N.decomprobante, N.° de comprobante, N.º de comprobante, N.o de comprobante, N° de comprobante, Nº de comprobante, Nro. de comprobante, No. de comprobante, No, de comprobante, N, de comprobante, N; de comprobante, N- de comprobante, N_ de comprobante, Numero de comprobante, Número de comprobante, Num. de comprobante, N. comprobante, N comprobante, Comprobante No., Comprobante N°, Comprobante N., Comprobante Nro., Comprobante:, Comprobante, etc.)
             r'\b(?:n[°º\.,;_\-o\s]*\s*(?:de\s*)?comprobante|comprobante\s*(?:n[°º\.,;_\-o\s]*|#)?)\s*[:\s#\.-]*\s*([0-9][a-zA-Z0-9\-]*|[a-zA-Z0-9\-]*[0-9][a-zA-Z0-9\-]*)',
-            
+
             # Documento variants (Documento, Documenta, No. documento, N. de documento, N° documento, Documento No., etc.)
             r'\b(?:n[°º\.,;_\-o\s]*\s*(?:de\s*)?document[oa]|document[oa]\s*(?:n[°º\.,;_\-o\s]*|#)?|doc\.?\s*(?:n[°º\.,;_\-o\s]*|#)?)\s*[:\s#\.-]*\s*([0-9][a-zA-Z0-9\-]*|[a-zA-Z0-9\-]*[0-9][a-zA-Z0-9\-]*)',
-            
+
             # Transacción / Operación variants (No. transacción, N° operación, Transacción No., Operación:, No. Op, etc.)
             r'\b(?:n[°º\.,;_\-o\s]*\s*(?:de\s*)?(?:transacci[oó]n|operaci[oó]n|\bop\b\.?)|(?:transacci[oó]n|operaci[oó]n)\s*(?:n[°º\.,;_\-o\s]*|#)?|\bop\b\.?\s*(?:n[°º\.,;_\-o\s]*|#)?)\s*[:\s#\.-]*\s*([0-9][a-zA-Z0-9\-]*|[a-zA-Z0-9\-]*[0-9][a-zA-Z0-9\-]*)',
-            
+
             # Secuencia / Autorización / Control variants (Secuencia:, No. autorización, No. control, etc.)
             r'\b(?:n[°º\.,;_\-o\s]*\s*(?:de\s*)?(?:secuencia|autorizaci[oó]n|control|aprobaci[oó]n)|(?:secuencia|autorizaci[oó]n|control|aprobaci[oó]n|\bsec\b\.?)\s*(?:n[°º\.,;_\-o\s]*|#)?)\s*[:\s#\.-]*\s*([0-9][a-zA-Z0-9\-]*|[a-zA-Z0-9\-]*[0-9][a-zA-Z0-9\-]*)',
-            
+
             # Referencia variants (Referencia / Cédula, No. referencia, Referencia No., Referencia:, Ref:)
             r'\b(?:referencia\s*/\s*c[eé]dula|n[°º\.,;_\-o\s]*\s*(?:de\s*)?referencia|referencia\s*(?:n[°º\.,;_\-o\s]*|#)?|\bref\b\.?\s*(?:n[°º\.,;_\-o\s]*|#)?)\s*[:\s#\.-]*\s*([0-9][a-zA-Z0-9\-]*|[a-zA-Z0-9\-]*[0-9][a-zA-Z0-9\-]*)',
-            
+
             # Código / ID de transacción (Código de transferencia, Transaction ID, ID Transacción)
             r'\b(?:c[oó]digo\s*(?:de\s*)?(?:transferencia|transacci[oó]n|confirmaci[oó]n|operaci[oó]n|pago)|(?:transaction|tx)\s*id|id\s*(?:de\s*)?transacci[oó]n)\s*[:\s#\.-]*\s*([0-9][a-zA-Z0-9\-]*|[a-zA-Z0-9\-]*[0-9][a-zA-Z0-9\-]*)'
         ]
-        
+
         ignored_refs = {'de', 'del', 'la', 'el', 'pago', 'transferencia', 'deposito', 'depósito', 'electronico', 'electrónico', 'directa', 'exitosa', 'bancario', 'ahorros', 'corriente', 'cuenta', 'origen', 'destino', 'debito', 'débito', 'credito', 'crédito', 'interbancaria', 'efectivo', 'pichincha', 'guayaquil', 'produbanco', 'pacifico', 'pacífico', 'internacional', 'bolivariano', 'cooperativa', 'jep'}
-        
+
         for pat in ref_patterns:
             for match in re.finditer(pat, text, re.IGNORECASE):
                 val = match.group(1).strip()
@@ -321,7 +321,7 @@ class ReceiptProcessor:
                 break
             if reference:
                 break
-                
+
         # 4. Fallback 1: Cédula pattern if no specific voucher reference found
         if not reference:
             ced_match = re.search(r'\b(?:C[eé]dula|CI|Identificaci[oó]n|RUC)\s*[:\s#-]*([0-9\-]+)', text, re.IGNORECASE)
@@ -330,7 +330,7 @@ class ReceiptProcessor:
                 clean_digits = re.sub(r'[^0-9]', '', val)
                 if clean_digits not in known_accounts:
                     reference = val
-                    
+
         # 5. Fallback 2: Standalone numbers avoiding lines with account/amount/date keywords
         if not reference:
             for line in text.splitlines():
@@ -345,13 +345,13 @@ class ReceiptProcessor:
                         break
                 if reference:
                     break
-                    
+
         # 6. Normalize reference if ending in check digit e.g. 171391685-4
         if reference and '-' in reference:
             parts = reference.split('-')
             if len(parts) == 2 and parts[0].isdigit() and len(parts[0]) >= 8 and len(parts[1]) <= 2:
                 reference = parts[0]
-                
+
         return amount, reference, payment_date
 
     @staticmethod
@@ -368,25 +368,25 @@ class ReceiptProcessor:
             }
         else:
             condo_info = get_condo_info()
-            
+
         if not condo_name:
             condo_name = condo_info["condo_name"]
         if condo_address is None:
             condo_address = condo_info["condo_address"]
         if condo_ruc is None:
             condo_ruc = condo_info["condo_ruc"]
-            
+
         # Ensure directories exist
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        
+
         doc = SimpleDocTemplate(dest_path, pagesize=letter,
                                 rightMargin=36, leftMargin=36,
                                 topMargin=36, bottomMargin=36)
         story = []
-        
+
         # Styles
         styles = getSampleStyleSheet()
-        
+
         # Custom styles
         title_style = ParagraphStyle(
             'ReceiptTitle',
@@ -397,7 +397,7 @@ class ReceiptProcessor:
             alignment=1, # Center
             spaceAfter=15
         )
-        
+
         subtitle_style = ParagraphStyle(
             'ReceiptSubTitle',
             parent=styles['Normal'],
@@ -407,7 +407,7 @@ class ReceiptProcessor:
             alignment=1,
             spaceAfter=25
         )
-        
+
         label_style = ParagraphStyle(
             'Label',
             parent=styles['Normal'],
@@ -416,7 +416,7 @@ class ReceiptProcessor:
             fontName='Helvetica-Bold',
             textColor=colors.HexColor('#475569')
         )
-        
+
         value_style = ParagraphStyle(
             'Value',
             parent=styles['Normal'],
@@ -424,7 +424,7 @@ class ReceiptProcessor:
             leading=14,
             textColor=colors.HexColor('#0F172A')
         )
-        
+
         header_lines = [f"<b>{condo_name.upper()}</b>"]
         if condo_ruc:
             header_lines.append(f"RUC: {condo_ruc}")
@@ -434,11 +434,11 @@ class ReceiptProcessor:
         else:
             header_lines.append("Quito, Ecuador")
         header_text = "<br/>\n".join(header_lines)
-        
+
         # 1. Header Table
         header_p = Paragraph(header_text, ParagraphStyle('HeaderStyle', parent=styles['Normal'], fontSize=9.5, leading=13.5, textColor=colors.HexColor('#475569')))
         receipt_p = Paragraph(f"<b>RECIBO OFICIAL DE PAGO</b><br/><font color='#2563EB'><b>Nº {receipt_no}</b></font><br/>Fecha de Emisión: {datetime.now().strftime('%d/%m/%Y')}", ParagraphStyle('ReceiptStyle', parent=styles['Normal'], fontSize=10, leading=14, alignment=2))
-        
+
         header_table = Table([[header_p, receipt_p]], colWidths=[4.0*inch, 3.5*inch])
         header_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
@@ -446,7 +446,7 @@ class ReceiptProcessor:
         ]))
         story.append(header_table)
         story.append(Spacer(1, 15))
-        
+
         # Decorative Blue Line
         line_table = Table([[""]], colWidths=[7.5*inch])
         line_table.setStyle(TableStyle([
@@ -456,7 +456,7 @@ class ReceiptProcessor:
         ]))
         story.append(line_table)
         story.append(Spacer(1, 20))
-        
+
         # 2. Information Grid
         info_data = [
             [Paragraph("Condómino:", label_style), Paragraph(resident_name, value_style), Paragraph("Unidad / Depto:", label_style), Paragraph(unit, value_style)],
@@ -475,18 +475,18 @@ class ReceiptProcessor:
         ]))
         story.append(info_table)
         story.append(Spacer(1, 20))
-        
+
         # 3. Concept and Values Table
         table_style_header = ParagraphStyle('TH', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', textColor=colors.white)
         table_style_cell = ParagraphStyle('TD', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#334155'))
         table_style_cell_r = ParagraphStyle('TDR', parent=styles['Normal'], fontSize=9, alignment=2, textColor=colors.HexColor('#334155'))
         table_style_total_label = ParagraphStyle('TTL', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', alignment=2, textColor=colors.HexColor('#1E293B'))
         table_style_total_val = ParagraphStyle('TTV', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', alignment=2, textColor=colors.HexColor('#2563EB'))
-        
+
         detail_data = [
             [Paragraph("DESCRIPCIÓN / CONCEPTO", table_style_header), Paragraph("CANTIDAD", table_style_header), Paragraph("MONTO BASE", table_style_header), Paragraph("TOTAL", table_style_header)],
         ]
-        
+
         subtotal = 0.0
         # If there is aliquot paid
         if amount > 0:
@@ -497,7 +497,7 @@ class ReceiptProcessor:
                 Paragraph(f"${amount:.2f}", table_style_cell_r)
             ])
             subtotal += amount
-            
+
         # If there are future aliquots paid in advance
         if advance_aliquots:
             for a in advance_aliquots:
@@ -510,7 +510,7 @@ class ReceiptProcessor:
                     Paragraph(f"${amt:.2f}", table_style_cell_r)
                 ])
                 subtotal += amt
-            
+
         # If there is abono to debt
         if abono_deuda > 0:
             detail_data.append([
@@ -520,7 +520,7 @@ class ReceiptProcessor:
                 Paragraph(f"${abono_deuda:.2f}", table_style_cell_r)
             ])
             subtotal += abono_deuda
-            
+
         # If there is extra payment
         if pago_extra > 0:
             detail_data.append([
@@ -530,7 +530,7 @@ class ReceiptProcessor:
                 Paragraph(f"${pago_extra:.2f}", table_style_cell_r)
             ])
             subtotal += pago_extra
-            
+
         # If there is late fee
         if late_fee > 0:
             detail_data.append([
@@ -539,16 +539,16 @@ class ReceiptProcessor:
                 Paragraph(f"${late_fee:.2f}", table_style_cell_r),
                 Paragraph(f"${late_fee:.2f}", table_style_cell_r)
             ])
-            
+
         total = subtotal + late_fee
-        
+
         # Add totals rows
         detail_data.extend([
             ["", "", Paragraph("SUBTOTAL:", table_style_total_label), Paragraph(f"${subtotal:.2f}", table_style_total_label)],
             ["", "", Paragraph("MULTA APLICADA:", table_style_total_label), Paragraph(f"${late_fee:.2f}", table_style_total_label)],
             ["", "", Paragraph("TOTAL RECIBIDO:", table_style_total_label), Paragraph(f"${total:.2f}", table_style_total_val)]
         ])
-        
+
         # Add outstanding debt remaining row if any
         if saldo_deuda > 0:
             detail_data.append([
@@ -556,10 +556,10 @@ class ReceiptProcessor:
                 Paragraph("SALDO RESTANTE DE DEUDA:", ParagraphStyle('TTL_Red', parent=table_style_total_label, textColor=colors.HexColor('#DC2626'))),
                 Paragraph(f"${saldo_deuda:.2f}", ParagraphStyle('TTV_Red', parent=table_style_total_val, textColor=colors.HexColor('#DC2626')))
             ])
-        
+
         col_widths = [4.0*inch, 1.0*inch, 1.25*inch, 1.25*inch]
         detail_table = Table(detail_data, colWidths=col_widths)
-        
+
         t_style = [
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')), # Dark grey header
             ('ALIGN', (0,0), (-1,0), 'LEFT'),
@@ -574,7 +574,7 @@ class ReceiptProcessor:
         detail_table.setStyle(TableStyle(t_style))
         story.append(detail_table)
         story.append(Spacer(1, 15))
-        
+
         # 4. Estado de Cuenta / Detalle de Deuda Pendiente
         debt_details = []
         unit_total_debt = 0.0
@@ -605,7 +605,7 @@ class ReceiptProcessor:
                         unit_total_debt = float(d.get("total_debt", 0.0) or 0.0)
                         debt_details = list(d.get("details", []))
                         break
-            except Exception as e:
+            except Exception:
                 if saldo_deuda > 0:
                     unit_total_debt = float(saldo_deuda)
 
@@ -652,9 +652,9 @@ class ReceiptProcessor:
                 ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ]))
             story.append(aldia_table)
-            
+
         story.append(Spacer(1, 20))
-        
+
         # 5. Signatures / Bottom Seal
         sign_label_style = ParagraphStyle('SL', parent=styles['Normal'], fontSize=8, leading=12, alignment=1, textColor=colors.HexColor('#64748B'))
         sign_line_table = Table([
@@ -667,7 +667,7 @@ class ReceiptProcessor:
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ]))
         story.append(sign_line_table)
-        
+
         # Build Document
         doc.build(story)
         return dest_path
@@ -680,14 +680,14 @@ class BankStatementParser:
         val_str = str(val_str).strip().replace("$", "")
         if not val_str:
             return 0.0
-        
+
         # Remove any spaces
         val_str = val_str.replace(" ", "")
-        
+
         # Check if wrapped in parentheses (negative amount)
         if val_str.startswith("(") and val_str.endswith(")"):
             val_str = "-" + val_str[1:-1]
-            
+
         # Check if it has both comma and dot
         if "," in val_str and "." in val_str:
             if val_str.rfind(",") > val_str.rfind("."):
@@ -703,7 +703,7 @@ class BankStatementParser:
                 val_str = val_str.replace(",", ".")
             else:
                 val_str = val_str.replace(",", "")
-                
+
         try:
             return float(val_str)
         except:
@@ -714,39 +714,39 @@ class BankStatementParser:
         date_str = str(date_str).strip()
         if not date_str:
             return datetime.now().strftime("%Y-%m-%d")
-            
+
         parsed = ReceiptProcessor.parse_receipt_date(date_str)
         if parsed:
             return parsed
-            
+
         # Try YYYY-MM-DD
         match = re.search(r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b', date_str)
         if match:
             y, m, d = int(match.group(1)), int(match.group(2)), int(match.group(3))
             if 1 <= m <= 12 and 1 <= d <= 31 and 2000 <= y <= 2100:
                 return f"{y:04d}-{m:02d}-{d:02d}"
-            
+
         # Try DD-MM-YYYY or DD/MM/YYYY
         match = re.search(r'\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b', date_str)
         if match:
             d, m, y = int(match.group(1)), int(match.group(2)), int(match.group(3))
             if 1 <= m <= 12 and 1 <= d <= 31 and 2000 <= y <= 2100:
                 return f"{y:04d}-{m:02d}-{d:02d}"
-            
+
         # Try DD-MM-YY or DD/MM/YY
         match = re.search(r'\b(\d{1,2})[-/](\d{1,2})[-/](\d{2})\b', date_str)
         if match:
             d, m, y = int(match.group(1)), int(match.group(2)), int(match.group(3)) + 2000
             if 1 <= m <= 12 and 1 <= d <= 31 and 2000 <= y <= 2100:
                 return f"{y:04d}-{m:02d}-{d:02d}"
-            
+
         # Try DD-MM or DD/MM (no year) - only if month and day are strictly valid
         match = re.search(r'\b(\d{1,2})[-/](\d{1,2})\b', date_str)
         if match:
             d, m = int(match.group(1)), int(match.group(2))
             if 1 <= m <= 12 and 1 <= d <= 31:
                 return f"{datetime.now().year}-{m:02d}-{d:02d}"
-            
+
         return date_str
 
     @staticmethod
@@ -760,10 +760,10 @@ class BankStatementParser:
             import openpyxl
         except ImportError:
             openpyxl = None
-            
+
         transactions = []
         file_ext = file_ext.lower()
-        
+
         # 1. Excel Parser
         if file_ext == ".xlsx":
             if not openpyxl:
@@ -772,17 +772,17 @@ class BankStatementParser:
             try:
                 wb = openpyxl.load_workbook(file_path, data_only=True)
                 sheet = wb.active
-                
+
                 header_row_idx = None
-                col_mapping = {} 
-                
+                col_mapping = {}
+
                 # Look at first 15 rows to find header
                 for r_idx in range(1, 16):
                     row_vals = [str(sheet.cell(r_idx, col_idx).value or "").strip().lower() for col_idx in range(1, min(15, sheet.max_column + 1))]
-                    
+
                     has_date = any(k in row_vals for k in ["fecha", "date", "f. valor", "f.valor", "f. proceso", "f.proceso"])
                     has_amount = any(k in row_vals for k in ["monto", "valor", "depósito", "deposito", "abono", "crédito", "credito", "cantidad", "amount", "value"])
-                    
+
                     if has_date and has_amount:
                         header_row_idx = r_idx
                         for col_idx in range(1, sheet.max_column + 1):
@@ -805,46 +805,46 @@ class BankStatementParser:
                             elif any(k in val for k in ["detalle", "concepto", "descripción", "descripcion", "glosa", "beneficiario", "descrip", "narrativa"]):
                                 col_mapping["detail"] = col_idx
                         break
-                        
+
                 if not header_row_idx:
                     header_row_idx = 1
                     col_mapping = {"date": 1, "reference": 2, "amount": 3, "detail": 4}
-                    
+
                 date_col = col_mapping.get("date", 1)
                 ref_col = col_mapping.get("reference", 2)
                 detail_col = col_mapping.get("detail", 4)
-                
+
                 credit_col = col_mapping.get("credit")
                 debit_col = col_mapping.get("debit")
                 amount_col = col_mapping.get("amount", 3)
-                
+
                 val_col = credit_col if credit_col is not None else amount_col
-                
+
                 for r_idx in range(header_row_idx + 1, sheet.max_row + 1):
                     raw_date = sheet.cell(r_idx, date_col).value
                     if raw_date is None:
                         continue
-                        
+
                     is_debit = False
                     if debit_col is not None:
                         raw_debit = sheet.cell(r_idx, debit_col).value
                         if BankStatementParser.clean_amount(raw_debit) > 0:
                             is_debit = True
-                            
+
                     raw_val = sheet.cell(r_idx, val_col).value
                     if raw_val is None:
                         continue
-                        
+
                     val_str = str(raw_val).strip()
                     if val_str.startswith("-") or (val_str.startswith("(") and val_str.endswith(")")):
                         is_debit = True
-                        
+
                     amount_val = abs(BankStatementParser.clean_amount(val_str))
                     if is_debit or amount_val <= 0:
                         continue
-                        
+
                     raw_detail = str(sheet.cell(r_idx, detail_col).value or "").strip() if detail_col else ""
-                    
+
                     # Fallback for misaligned columns (common in PDF-to-Excel converters)
                     if amount_val > 500.0 and raw_detail:
                         detail_amount_match = re.search(r'\$\s*(\d+(?:[.,]\d+)*)', raw_detail)
@@ -852,42 +852,42 @@ class BankStatementParser:
                             extracted_amt = BankStatementParser.clean_amount(detail_amount_match.group(1))
                             if 0.0 < extracted_amt < 500.0:
                                 amount_val = extracted_amt
-                                
+
                     tx = {}
                     if isinstance(raw_date, datetime):
                         tx["date"] = raw_date.strftime("%Y-%m-%d")
                     else:
                         tx["date"] = BankStatementParser.clean_date(str(raw_date))
-                        
+
                     raw_ref = sheet.cell(r_idx, ref_col).value if ref_col else ""
                     tx["reference"] = str(raw_ref or "").split(".")[0].strip() if raw_ref is not None else ""
                     tx["amount"] = amount_val
                     tx["detail"] = raw_detail
-                    
+
                     transactions.append(tx)
             except Exception as e:
                 print(f"Error parsing XLSX statement: {e}")
-                
+
         # 2. CSV Parser
         elif file_ext == ".csv":
             try:
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
-                    
+
                 lines = content.splitlines()
                 if not lines:
                     return []
-                    
+
                 sep = ","
                 if ";" in lines[0] and lines[0].count(";") > lines[0].count(","):
                     sep = ";"
-                    
+
                 reader = csv.reader(lines, delimiter=sep)
                 rows = list(reader)
-                
+
                 header_row_idx = None
                 col_mapping = {}
-                
+
                 for idx, r in enumerate(rows[:10]):
                     row_vals = [val.strip().lower() for val in r]
                     has_date = any(k in row_vals for k in ["fecha", "date", "f. valor", "f.valor", "f. proceso", "f.proceso"])
@@ -913,44 +913,44 @@ class BankStatementParser:
                             elif any(k in val for k in ["detalle", "concepto", "descripción", "descripcion", "glosa", "beneficiario", "descrip", "narrativa"]):
                                 col_mapping["detail"] = col_idx
                         break
-                        
+
                 if header_row_idx is None:
                     header_row_idx = 0
                     col_mapping = {"date": 0, "reference": 1, "amount": 2, "detail": 3}
-                    
+
                 date_col = col_mapping.get("date", 0)
                 ref_col = col_mapping.get("reference", 1)
                 detail_col = col_mapping.get("detail", 3)
-                
+
                 credit_col = col_mapping.get("credit")
                 debit_col = col_mapping.get("debit")
                 amount_col = col_mapping.get("amount", 2)
-                
+
                 val_col = credit_col if credit_col is not None else amount_col
-                
+
                 for r in rows[header_row_idx + 1:]:
                     if len(r) <= max(col_mapping.values()):
                         continue
                     raw_date = r[date_col].strip()
                     if not raw_date:
                         continue
-                        
+
                     is_debit = False
                     if debit_col is not None and len(r) > debit_col:
                         if BankStatementParser.clean_amount(r[debit_col]) > 0:
                             is_debit = True
-                            
+
                     raw_val = r[val_col]
                     val_str = str(raw_val).strip()
                     if val_str.startswith("-") or (val_str.startswith("(") and val_str.endswith(")")):
                         is_debit = True
-                        
+
                     amount_val = abs(BankStatementParser.clean_amount(val_str))
                     if is_debit or amount_val <= 0:
                         continue
-                        
+
                     raw_detail = r[detail_col].strip() if len(r) > detail_col else "CSV Upload"
-                    
+
                     # Fallback for misaligned columns (common in PDF-to-Excel/CSV converters)
                     if amount_val > 500.0 and raw_detail:
                         detail_amount_match = re.search(r'\$\s*(\d+(?:[.,]\d+)*)', raw_detail)
@@ -958,17 +958,17 @@ class BankStatementParser:
                             extracted_amt = BankStatementParser.clean_amount(detail_amount_match.group(1))
                             if 0.0 < extracted_amt < 500.0:
                                 amount_val = extracted_amt
-                                
+
                     tx = {}
                     tx["date"] = BankStatementParser.clean_date(raw_date)
                     tx["reference"] = r[ref_col].strip() if len(r) > ref_col else ""
                     tx["amount"] = amount_val
                     tx["detail"] = raw_detail
-                    
+
                     transactions.append(tx)
             except Exception as e:
                 print(f"Error parsing CSV statement: {e}")
-                
+
         # 3. PDF and Image Parsing (Text extraction OCR/pypdf)
         else:
             text = ""
@@ -977,24 +977,24 @@ class BankStatementParser:
             else:
                 from ocr_helper import OCRHelper
                 text = OCRHelper.extract_text(file_path)
-                
+
             transactions = BankStatementParser.parse_text_statement(text)
-            
+
         return transactions
 
     @staticmethod
     def parse_text_statement(text):
         transactions = []
         lines = text.split("\n")
-        
+
         current_date = None
         accumulated_concept = []
-        
+
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-                
+
             # Detect date (YYYY-MM-DD, DD/MM/YYYY, or Month in letters)
             date_match = re.search(r'\b(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/][a-zA-Z]{3,12}[-/]\d{1,2}|\d{1,2}[-/][a-zA-Z]{3,12}[-/]\d{2,4})\b', line)
             if not date_match:
@@ -1003,12 +1003,12 @@ class BankStatementParser:
                 cleaned = BankStatementParser.clean_date(date_match.group(1))
                 if re.match(r'^\d{4}-\d{2}-\d{2}$', str(cleaned)):
                     current_date = cleaned
-                
+
             # Check if this line is a core transaction line (contains Crédito or Débito)
             # We use encoding-independent dot matches for accented characters
             tx_match = re.search(r'(\d+)\s+(Cr.dito|D.bito)', line, re.IGNORECASE)
             fused_match = re.search(r'\$\s*(-?\d+[.,]\d{2})\s*(\d{5,15})', line)
-            
+
             if tx_match or (fused_match and re.search(r'(Cr.dito|D.bito)', line, re.IGNORECASE)):
                 is_fused = False
                 if fused_match:
@@ -1020,14 +1020,14 @@ class BankStatementParser:
                 else:
                     ref_val = tx_match.group(1)
                     tx_type = tx_match.group(2).lower()
-                    
+
                 # If it's a debit (withdrawal/egress), we skip it (only load credits/deposits)
                 if re.search(r'd.bito', tx_type, re.IGNORECASE):
                     accumulated_concept = []
                     continue
-                    
+
                 date_val = current_date if current_date else datetime.now().strftime("%Y-%m-%d")
-                
+
                 if is_fused:
                     fused_word = fused_match.group(0)
                     concept_before = line[:line.find(fused_word)].strip()
@@ -1036,7 +1036,7 @@ class BankStatementParser:
                     type_word = tx_match.group(0)
                     idx = line.find(type_word)
                     after_type = line[idx + len(type_word):]
-                    
+
                     # Tokenize by whitespace to avoid matching parts of masked accounts
                     tokens = after_type.strip().split()
                     parsed_numbers = []
@@ -1048,20 +1048,20 @@ class BankStatementParser:
                             val = abs(BankStatementParser.clean_amount(num_match.group(0)))
                             if val > 0:
                                 parsed_numbers.append(val)
-                            
+
                     if parsed_numbers:
                         # The first number after Crédito is the deposit amount, the second is the balance
                         amount_val = parsed_numbers[0]
                     else:
                         amount_val = 0.0
-                        
+
                     concept_before = line[:line.find(ref_val)].strip()
-                    
+
                 concept_before = re.sub(r'^(Fecha|Concepto|N.mero|N&uacute;mero|N&Uacute;mero|N\u00famero|N\u00damero|Número|Numero|Documento|Tipo|Cuenta|Monto|Saldo|\s)+', '', concept_before, flags=re.IGNORECASE).strip()
-                
+
                 # Filter out timezone modifiers or times
                 concept_before = re.sub(r'\b\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?\b', '', concept_before).strip()
-                
+
                 accumulated_filtered = []
                 for ac_line in accumulated_concept:
                     # Skip date-only/time-only lines
@@ -1070,11 +1070,11 @@ class BankStatementParser:
                     if re.search(r'^\d{4}[-/]\d{1,2}[-/]\d{1,2}$|^\d{1,2}[-/]\d{1,2}[-/]\d{4}$', ac_line):
                         continue
                     accumulated_filtered.append(ac_line)
-                
+
                 detail_val = " ".join(accumulated_filtered + [concept_before]).strip()
                 detail_val = re.sub(r'\s+', ' ', detail_val)
                 detail_val = detail_val[:50]
-                
+
                 if amount_val > 0:
                     transactions.append({
                         "date": date_val,
@@ -1082,7 +1082,7 @@ class BankStatementParser:
                         "amount": amount_val,
                         "detail": detail_val if detail_val else "Depósito Bancario"
                     })
-                    
+
                 accumulated_concept = []
             else:
                 # Accumulate as concept part if it doesn't contain headers and a date has been seen
@@ -1091,7 +1091,7 @@ class BankStatementParser:
                         clean_line = re.sub(r'[*]+', '', line).strip()
                         if clean_line and clean_line.lower() not in ["am", "pm"]:
                             accumulated_concept.append(clean_line)
-                        
+
         if not transactions and ("produbanco" in text.lower() or "pichincha" in text.lower()):
             transactions = [
                 {"date": "2026-04-18", "reference": "171391685", "amount": 70.0, "detail": "TRANSF Jenny Portilla 701"},
@@ -1099,7 +1099,7 @@ class BankStatementParser:
                 {"date": "2026-06-12", "reference": "REF-22334", "amount": 50.0, "detail": "DEP Jorge Villalba 301"},
                 {"date": "2026-06-13", "reference": "112233", "amount": 50.0, "detail": "TRANSF Ascensor Depto 701"}
             ]
-            
+
         return transactions
 
     @staticmethod
@@ -1108,14 +1108,14 @@ class BankStatementParser:
             condo_name = get_condo_name()
         # Ensure directory exists
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        
+
         doc = SimpleDocTemplate(dest_path, pagesize=letter,
                                 rightMargin=36, leftMargin=36,
                                 topMargin=36, bottomMargin=36)
         story = []
-        
+
         styles = getSampleStyleSheet()
-        
+
         title_style = ParagraphStyle(
             'ReportTitle',
             parent=styles['Heading1'],
@@ -1125,7 +1125,7 @@ class BankStatementParser:
             alignment=1,
             spaceAfter=5
         )
-        
+
         meta_style = ParagraphStyle(
             'ReportMeta',
             parent=styles['Normal'],
@@ -1134,7 +1134,7 @@ class BankStatementParser:
             alignment=1,
             spaceAfter=20
         )
-        
+
         h2_style = ParagraphStyle(
             'ReportH2',
             parent=styles['Heading2'],
@@ -1144,10 +1144,10 @@ class BankStatementParser:
             spaceBefore=15,
             spaceAfter=8
         )
-        
+
         story.append(Paragraph("REPORTE FINANCIERO CONSOLIDADO", title_style))
         story.append(Paragraph(f"{condo_name} — Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}", meta_style))
-        
+
         currency = summary.get("currency", "$")
         kpi_data = [
             [
@@ -1157,7 +1157,7 @@ class BankStatementParser:
                 Paragraph(f"<b>DEUDA EN MORA</b><br/><font color='#D97706'><b>{currency}{summary['total_debt']:.2f}</b></font>", styles['Normal'])
             ]
         ]
-        
+
         kpi_table = Table(kpi_data, colWidths=[1.875*inch]*4)
         kpi_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
@@ -1170,16 +1170,16 @@ class BankStatementParser:
         ]))
         story.append(kpi_table)
         story.append(Spacer(1, 15))
-        
+
         # Debtors Table
         story.append(Paragraph("Control de Deudores en Mora", h2_style))
         debt_headers = ["UNIDAD", "PROPIETARIO", "MESES", "DETALLES", "DEUDA TOTAL"]
-        
+
         table_th = ParagraphStyle('TTH', parent=styles['Normal'], fontSize=8, fontName='Helvetica-Bold', textColor=colors.white)
         table_td = ParagraphStyle('TTD', parent=styles['Normal'], fontSize=8)
         table_td_r = ParagraphStyle('TTDR', parent=styles['Normal'], fontSize=8, alignment=2)
         table_td_red = ParagraphStyle('TTDRR', parent=styles['Normal'], fontSize=8, alignment=2, fontName='Helvetica-Bold', textColor=colors.HexColor('#DC2626'))
-        
+
         debt_rows = [[Paragraph(h, table_th) for h in debt_headers]]
         for d in debtors:
             debt_rows.append([
@@ -1189,10 +1189,10 @@ class BankStatementParser:
                 Paragraph(", ".join(d["details"]), table_td),
                 Paragraph(f"{currency}{d['total_debt']:.2f}", table_td_red)
             ])
-            
+
         if len(debt_rows) == 1:
             debt_rows.append([Paragraph("No existen deudores pendientes en mora.", table_td), "", "", "", ""])
-            
+
         debt_table = Table(debt_rows, colWidths=[0.8*inch, 1.8*inch, 0.7*inch, 3.2*inch, 1.0*inch])
         debt_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
@@ -1203,7 +1203,7 @@ class BankStatementParser:
         ]))
         story.append(debt_table)
         story.append(Spacer(1, 15))
-        
+
         # Recent Expenses
         story.append(Paragraph("Historial de Egresos Recientes", h2_style))
         exp_headers = ["FECHA", "CATEGORÍA", "DESCRIPCIÓN", "MONTO"]
@@ -1215,7 +1215,7 @@ class BankStatementParser:
                 Paragraph(e["description"], table_td),
                 Paragraph(f"{currency}{e['amount']:.2f}", table_td_r)
             ])
-            
+
         exp_table = Table(exp_rows, colWidths=[1.0*inch, 1.2*inch, 4.3*inch, 1.0*inch])
         exp_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
@@ -1225,7 +1225,7 @@ class BankStatementParser:
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
         ]))
         story.append(exp_table)
-        
+
         doc.build(story)
         return dest_path
 
@@ -1248,7 +1248,7 @@ class BankStatementParser:
                                 topMargin=54, bottomMargin=54)
         story = []
         styles = getSampleStyleSheet()
-        
+
         # Styles
         title_style = ParagraphStyle(
             'CertTitle',
@@ -1259,7 +1259,7 @@ class BankStatementParser:
             alignment=1,
             spaceAfter=30
         )
-        
+
         body_style = ParagraphStyle(
             'CertBody',
             parent=styles['Normal'],
@@ -1269,7 +1269,7 @@ class BankStatementParser:
             alignment=4, # Justified
             spaceAfter=40
         )
-        
+
         sign_label_style = ParagraphStyle(
             'SignLabel',
             parent=styles['Normal'],
@@ -1279,7 +1279,7 @@ class BankStatementParser:
             textColor=colors.HexColor('#475569'),
             alignment=1
         )
-        
+
         sign_value_style = ParagraphStyle(
             'SignValue',
             parent=styles['Normal'],
@@ -1288,10 +1288,10 @@ class BankStatementParser:
             textColor=colors.HexColor('#0F172A'),
             alignment=1
         )
-        
+
         # Header Spacer
         story.append(Spacer(1, 30))
-        
+
         # Condo Header Title
         sub_header_parts = []
         if condo_ruc:
@@ -1301,19 +1301,19 @@ class BankStatementParser:
         else:
             sub_header_parts.append("Quito, Ecuador")
         sub_header_text = " • ".join(sub_header_parts)
-        
+
         story.append(Paragraph(f"<b>{condo_name.upper()}</b>", ParagraphStyle('CondoHeader', parent=styles['Normal'], fontSize=14, leading=18, alignment=1, textColor=colors.HexColor('#1E293B'), fontName='Helvetica-Bold')))
         story.append(Paragraph(sub_header_text, ParagraphStyle('CondoSubHeader', parent=styles['Normal'], fontSize=9, leading=12, alignment=1, textColor=colors.HexColor('#64748B'))))
         story.append(Spacer(1, 20))
-        
+
         # Separator Line
         story.append(Table([[Paragraph("", ParagraphStyle('Line', parent=styles['Normal']))]], colWidths=[7.0*inch], style=[('LINEBELOW', (0,0), (-1,-1), 1.5, colors.HexColor('#CBD5E1'))]))
         story.append(Spacer(1, 40))
-        
+
         # Title
         story.append(Paragraph("<b>CERTIFICADO DE NO ADEUDAR</b>", title_style))
         story.append(Spacer(1, 20))
-        
+
         # Body text
         current_date_str = datetime.now().strftime("%d de %B de %Y")
         # Translate month names to Spanish
@@ -1324,7 +1324,7 @@ class BankStatementParser:
         }
         for eng, esp in months_es.items():
             current_date_str = current_date_str.replace(eng, esp)
-            
+
         cert_intro = f"La administración y la directiva del <b>{condo_name.upper()}</b>"
         if condo_ruc:
             cert_intro += f" con RUC <b>{condo_ruc}</b>"
@@ -1339,10 +1339,10 @@ class BankStatementParser:
         Por lo tanto, no registra deudas ni obligaciones pendientes de pago con el condominio. Se extiende el presente certificado a petición del interesado para los fines legales que crea convenientes.
         <br/><br/>
         Dado en la ciudad de Quito, el {current_date_str}."""
-        
+
         story.append(Paragraph(cert_text, body_style))
         story.append(Spacer(1, 60))
-        
+
         # Signatures Table
         sign_p1 = [
             Spacer(1, 15),
@@ -1351,7 +1351,7 @@ class BankStatementParser:
             Paragraph(f"<b>{president_name}</b>", sign_value_style),
             Paragraph("Presidente(a)", sign_label_style)
         ]
-        
+
         sign_p2 = [
             Spacer(1, 15),
             Table([[Paragraph("", ParagraphStyle('SignLine', parent=styles['Normal']))]], colWidths=[2.2*inch], style=[('LINEBELOW', (0,0), (-1,-1), 1.0, colors.HexColor('#475569'))]),
@@ -1359,15 +1359,15 @@ class BankStatementParser:
             Paragraph(f"<b>{treasurer_name}</b>", sign_value_style),
             Paragraph("Tesorero(a)", sign_label_style)
         ]
-        
+
         sign_table = Table([[sign_p1, "", sign_p2]], colWidths=[3.0*inch, 1.0*inch, 3.0*inch])
         sign_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
             ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ]))
-        
+
         story.append(sign_table)
-        
+
         doc.build(story)
         return dest_path
 
@@ -1386,7 +1386,7 @@ class FinancialReportPDFGenerator:
     @staticmethod
     def _create_header_and_kpis(story, styles, title, condo_name, filters_text, kpis_list, condo_address="", condo_ruc=""):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-        
+
         sub_items = []
         if condo_ruc:
             sub_items.append(f"<b>RUC:</b> {condo_ruc}")
@@ -1394,7 +1394,7 @@ class FinancialReportPDFGenerator:
             sub_items.append(f"{condo_address}")
         sub_items.append("Sistema de Administración y Control Financiero")
         sub_text = " | ".join(sub_items)
-        
+
         # Header table: Left = Condo Name & Subtitle, Right = Report Title & Date
         left_p = [
             Paragraph(f"<b>{condo_name.upper()}</b>", ParagraphStyle('CondoTitle', fontName='Helvetica-Bold', fontSize=13, leading=15, textColor=colors.HexColor('#1E293B'))),
@@ -1413,11 +1413,11 @@ class FinancialReportPDFGenerator:
             ('BOTTOMPADDING', (0,0), (-1,-1), 4),
         ]))
         story.append(header_table)
-        
+
         # Divider line
         story.append(Table([[Paragraph("", ParagraphStyle('Div', fontSize=1))]], colWidths=[10.0*inch], style=[('LINEBELOW', (0,0), (-1,-1), 1.0, colors.HexColor('#CBD5E1'))]))
         story.append(Spacer(1, 8))
-        
+
         # KPI boxes
         if kpis_list:
             kpi_cols = []
@@ -1449,14 +1449,14 @@ class FinancialReportPDFGenerator:
             condo_address = condo_info["condo_address"]
         if condo_ruc is None:
             condo_ruc = condo_info["condo_ruc"]
-            
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         doc = SimpleDocTemplate(dest_path, pagesize=landscape(letter),
                                 rightMargin=36, leftMargin=36,
                                 topMargin=36, bottomMargin=36)
         story = []
         styles = getSampleStyleSheet()
-        
+
         kpis = report_data.get("kpis", {})
         filters = report_data.get("filters", {})
         f_parts = []
@@ -1467,7 +1467,7 @@ class FinancialReportPDFGenerator:
         if filters.get("category") and filters.get("category") != "all":
             f_parts.append(f"Cat: {filters.get('category')}")
         filters_str = " | ".join(f_parts) if f_parts else "Todos los registros"
-        
+
         kpis_list = [
             {"label": "TOTAL GLOBAL", "value": f"{currency}{kpis.get('total_collected', 0.0):,.2f}"},
             {"label": "CONCILIADOS", "value": f"{currency}{kpis.get('total_reconciled', kpis.get('total_collected', 0.0)):,.2f}"},
@@ -1475,12 +1475,12 @@ class FinancialReportPDFGenerator:
             {"label": "ALÍCUOTAS / OTROS", "value": f"{currency}{(kpis.get('total_aliquots', 0.0) + kpis.get('total_charges', 0.0) + kpis.get('total_other_incomes', 0.0)):,.2f}"},
             {"label": "MOVIMIENTOS", "value": f"{kpis.get('count_payments', 0)} ({kpis.get('count_reconciled', 0)} Conc. / {kpis.get('count_unreconciled', 0)} Sin Conc.)"}
         ]
-        
+
         FinancialReportPDFGenerator._create_header_and_kpis(
             story, styles, "Reporte de Recaudación y Pagos", condo_name, filters_str, kpis_list,
             condo_address=condo_address, condo_ruc=condo_ruc
         )
-        
+
         th_style = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white, alignment=0)
         th_r_style = ParagraphStyle('THR', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white, alignment=2)
         td_style = ParagraphStyle('TD', fontName='Helvetica', fontSize=7.5, leading=9, textColor=colors.HexColor('#1E293B'))
@@ -1488,10 +1488,10 @@ class FinancialReportPDFGenerator:
         td_warning = ParagraphStyle('TDWarn', fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=colors.HexColor('#B45309'))
         td_r = ParagraphStyle('TDR', fontName='Helvetica', fontSize=7.5, leading=9, textColor=colors.HexColor('#1E293B'), alignment=2)
         td_r_bold = ParagraphStyle('TDRBold', fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=colors.HexColor('#0F172A'), alignment=2)
-        
+
         headers = ["FECHA", "TIPO / CONCEPTO", "DEPTO", "PAGADOR / RESPONSABLE", "REFERENCIA", "ESTADO", "BASE", "MULTA", "TOTAL"]
         col_widths = [0.8*inch, 2.0*inch, 0.7*inch, 2.0*inch, 1.2*inch, 0.9*inch, 0.8*inch, 0.7*inch, 0.9*inch]
-        
+
         table_data = [[
             Paragraph(headers[0], th_style),
             Paragraph(headers[1], th_style),
@@ -1503,7 +1503,7 @@ class FinancialReportPDFGenerator:
             Paragraph(headers[7], th_r_style),
             Paragraph(headers[8], th_r_style)
         ]]
-        
+
         for r in report_data.get("rows", []):
             is_unreconciled = (not r.get("is_reconciled", True)) or (r.get("status") == "No Conciliado")
             st_style = td_warning if is_unreconciled else td_style
@@ -1518,7 +1518,7 @@ class FinancialReportPDFGenerator:
                 Paragraph(f"{currency}{r.get('late_fee', 0.0):.2f}", td_r),
                 Paragraph(f"{currency}{r.get('amount', 0.0):.2f}", td_r_bold)
             ])
-            
+
         if len(table_data) == 1:
             table_data.append([Paragraph("No se encontraron pagos con los filtros seleccionados.", td_style), "", "", "", "", "", "", "", ""])
         else:
@@ -1555,7 +1555,7 @@ class FinancialReportPDFGenerator:
                 Paragraph(f"<b>{currency}{tot_fee:,.2f}</b>", td_r_bold),
                 Paragraph(f"<b>{currency}{tot_all:,.2f}</b>", td_r_bold)
             ])
-            
+
         t = Table(table_data, colWidths=col_widths, repeatRows=1)
         t_style = [
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
@@ -1572,10 +1572,10 @@ class FinancialReportPDFGenerator:
                 ('BACKGROUND', (0,-3), (-1,-3), colors.HexColor('#F1F5F9')),
                 ('SPAN', (0,-3), (5,-3)),
                 ('LINEABOVE', (0,-3), (-1,-3), 1.0, colors.HexColor('#94A3B8')),
-                
+
                 ('BACKGROUND', (0,-2), (-1,-2), colors.HexColor('#FEF3C7')),
                 ('SPAN', (0,-2), (5,-2)),
-                
+
                 ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#E2E8F0')),
                 ('SPAN', (0,-1), (5,-1)),
                 ('LINEABOVE', (0,-1), (-1,-1), 1.0, colors.HexColor('#94A3B8')),
@@ -1590,7 +1590,7 @@ class FinancialReportPDFGenerator:
             ])
         t.setStyle(TableStyle(t_style))
         story.append(t)
-        
+
         doc.build(story)
         return dest_path
 
@@ -1603,14 +1603,14 @@ class FinancialReportPDFGenerator:
             condo_address = condo_info["condo_address"]
         if condo_ruc is None:
             condo_ruc = condo_info["condo_ruc"]
-            
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         doc = SimpleDocTemplate(dest_path, pagesize=landscape(letter),
                                 rightMargin=36, leftMargin=36,
                                 topMargin=36, bottomMargin=36)
         story = []
         styles = getSampleStyleSheet()
-        
+
         kpis = report_data.get("kpis", {})
         filters = report_data.get("filters", {})
         f_parts = []
@@ -1621,7 +1621,7 @@ class FinancialReportPDFGenerator:
         if filters.get("status_filter") and filters.get("status_filter") != "all":
             f_parts.append(f"Estado: {filters.get('status_filter')}")
         filters_str = " | ".join(f_parts) if f_parts else "Todas las unidades"
-        
+
         kpis_list = [
             {"label": "DEUDA TOTAL CONDOMINIO", "value": f"{currency}{kpis.get('total_debt', 0.0):,.2f}"},
             {"label": "UNIDADES EN MORA", "value": f"{kpis.get('debtors_count', 0)} deptos"},
@@ -1629,12 +1629,12 @@ class FinancialReportPDFGenerator:
             {"label": "MORA CRÍTICA (>2 meses)", "value": f"{kpis.get('critical_count', 0)} deptos"},
             {"label": "MAYOR DEUDOR", "value": f"Depto {kpis.get('highest_debtor_unit', '-')} ({currency}{kpis.get('highest_debtor_amount', 0.0):,.2f})"}
         ]
-        
+
         FinancialReportPDFGenerator._create_header_and_kpis(
             story, styles, "Reporte de Deudores y Cartera Vencida", condo_name, filters_str, kpis_list,
             condo_address=condo_address, condo_ruc=condo_ruc
         )
-        
+
         th_style = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white, alignment=0)
         th_r_style = ParagraphStyle('THR', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white, alignment=2)
         td_style = ParagraphStyle('TD', fontName='Helvetica', fontSize=7.5, leading=9, textColor=colors.HexColor('#1E293B'))
@@ -1642,10 +1642,10 @@ class FinancialReportPDFGenerator:
         td_r = ParagraphStyle('TDR', fontName='Helvetica', fontSize=7.5, leading=9, textColor=colors.HexColor('#1E293B'), alignment=2)
         td_r_bold = ParagraphStyle('TDRBold', fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=colors.HexColor('#0F172A'), alignment=2)
         td_red = ParagraphStyle('TDRed', fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=colors.HexColor('#DC2626'), alignment=2)
-        
+
         headers = ["DEPTO", "PROPIETARIO", "CONTACTO", "PERÍODOS PENDIENTES", "ALÍCUOTAS", "MULTAS", "EXTRAS", "DEUDA TOTAL", "ESTADO"]
         col_widths = [0.7*inch, 1.8*inch, 1.3*inch, 2.3*inch, 0.8*inch, 0.7*inch, 0.7*inch, 0.9*inch, 0.8*inch]
-        
+
         table_data = [[
             Paragraph(headers[0], th_style),
             Paragraph(headers[1], th_style),
@@ -1657,12 +1657,12 @@ class FinancialReportPDFGenerator:
             Paragraph(headers[7], th_r_style),
             Paragraph(headers[8], th_style)
         ]]
-        
+
         for r in report_data.get("rows", []):
             contact_str = f"{r.get('phone', '')}<br/>{r.get('email', '')}" if r.get('phone') != '-' or r.get('email') != '-' else "-"
             total_d = r.get('total_debt', 0.0)
             tot_style = td_red if total_d > 0.01 else td_r_bold
-            
+
             table_data.append([
                 Paragraph(str(r.get("unit") or "-"), td_bold),
                 Paragraph(str(r.get("owner") or "-"), td_style),
@@ -1674,7 +1674,7 @@ class FinancialReportPDFGenerator:
                 Paragraph(f"{currency}{total_d:.2f}", tot_style),
                 Paragraph(str(r.get("morosity_level") or "-"), td_style)
             ])
-            
+
         if len(table_data) == 1:
             table_data.append([Paragraph("No se encontraron registros de deudores.", td_style), "", "", "", "", "", "", "", ""])
         else:
@@ -1690,7 +1690,7 @@ class FinancialReportPDFGenerator:
                 Paragraph(f"<b>{currency}{tot_sum:,.2f}</b>", td_red),
                 ""
             ])
-            
+
         t = Table(table_data, colWidths=col_widths, repeatRows=1)
         t_style = [
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
@@ -1711,7 +1711,7 @@ class FinancialReportPDFGenerator:
             ])
         t.setStyle(TableStyle(t_style))
         story.append(t)
-        
+
         doc.build(story)
         return dest_path
 
@@ -1724,14 +1724,14 @@ class FinancialReportPDFGenerator:
             condo_address = condo_info["condo_address"]
         if condo_ruc is None:
             condo_ruc = condo_info["condo_ruc"]
-            
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         doc = SimpleDocTemplate(dest_path, pagesize=landscape(letter),
                                 rightMargin=36, leftMargin=36,
                                 topMargin=36, bottomMargin=36)
         story = []
         styles = getSampleStyleSheet()
-        
+
         kpis = report_data.get("kpis", {})
         filters = report_data.get("filters", {})
         f_parts = []
@@ -1740,28 +1740,28 @@ class FinancialReportPDFGenerator:
         if filters.get("record_type") and filters.get("record_type") != "all":
             f_parts.append(f"Tipo: {filters.get('record_type')}")
         filters_str = " | ".join(f_parts) if f_parts else "Todos los comprobantes y movimientos pendientes"
-        
+
         kpis_list = [
             {"label": "TOTAL SIN CONCILIAR", "value": f"{currency}{kpis.get('total_unreconciled_amount', 0.0):,.2f}"},
             {"label": "COMPROBANTES RESIDENTES", "value": f"{kpis.get('resident_count', 0)} ({currency}{kpis.get('resident_amount', 0.0):,.2f})"},
             {"label": "MOVIMIENTOS BANCARIOS", "value": f"{kpis.get('bank_count', 0)} ({currency}{kpis.get('bank_amount', 0.0):,.2f})"},
             {"label": "TOTAL REGISTROS", "value": str(kpis.get('total_records', 0))}
         ]
-        
+
         FinancialReportPDFGenerator._create_header_and_kpis(
             story, styles, "Reporte de Comprobantes y Transacciones Sin Conciliar", condo_name, filters_str, kpis_list,
             condo_address=condo_address, condo_ruc=condo_ruc
         )
-        
+
         th_style = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white, alignment=0)
         th_r_style = ParagraphStyle('THR', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white, alignment=2)
         td_style = ParagraphStyle('TD', fontName='Helvetica', fontSize=7.5, leading=9, textColor=colors.HexColor('#1E293B'))
         td_bold = ParagraphStyle('TDBold', fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=colors.HexColor('#1E293B'))
         td_r_bold = ParagraphStyle('TDRBold', fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=colors.HexColor('#0F172A'), alignment=2)
-        
+
         headers = ["ORIGEN / TIPO", "FECHA", "DEPTO", "REFERENCIA", "MONTO", "DETALLE / CONCEPTO", "ESTADO", "SUGERENCIA DE ACCIÓN"]
         col_widths = [1.3*inch, 0.8*inch, 0.8*inch, 1.2*inch, 0.9*inch, 2.0*inch, 1.1*inch, 1.9*inch]
-        
+
         table_data = [[
             Paragraph(headers[0], th_style),
             Paragraph(headers[1], th_style),
@@ -1772,7 +1772,7 @@ class FinancialReportPDFGenerator:
             Paragraph(headers[6], th_style),
             Paragraph(headers[7], th_style)
         ]]
-        
+
         for r in report_data.get("rows", []):
             table_data.append([
                 Paragraph(str(r.get("source") or "-"), td_style),
@@ -1784,7 +1784,7 @@ class FinancialReportPDFGenerator:
                 Paragraph(str(r.get("status") or "-"), td_style),
                 Paragraph(str(r.get("suggestion") or "-"), td_style)
             ])
-            
+
         if len(table_data) == 1:
             table_data.append([Paragraph("No hay comprobantes ni movimientos pendientes sin conciliar.", td_style), "", "", "", "", "", "", ""])
         else:
@@ -1794,7 +1794,7 @@ class FinancialReportPDFGenerator:
                 Paragraph(f"<b>{currency}{tot_unrec:,.2f}</b>", td_r_bold),
                 "", "", ""
             ])
-            
+
         t = Table(table_data, colWidths=col_widths, repeatRows=1)
         t_style = [
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
@@ -1815,7 +1815,7 @@ class FinancialReportPDFGenerator:
             ])
         t.setStyle(TableStyle(t_style))
         story.append(t)
-        
+
         doc.build(story)
         return dest_path
 
@@ -1828,13 +1828,13 @@ class FinancialReportExcelGenerator:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Reporte Financiero"
-        
+
         # Row 1: Condo Name
         ws.merge_cells("A1:G1")
         ws["A1"] = condo_name.upper()
         ws["A1"].font = Font(name="Calibri", size=13, bold=True, color="1E293B")
         ws["A1"].alignment = Alignment(horizontal="left", vertical="center")
-        
+
         # Row 2: RUC & Address
         meta_sub = []
         if condo_ruc:
@@ -1842,25 +1842,25 @@ class FinancialReportExcelGenerator:
         if condo_address:
             meta_sub.append(f"Dirección: {condo_address}")
         meta_sub_str = " | ".join(meta_sub) if meta_sub else "Sistema de Administración y Control Financiero"
-        
+
         ws.merge_cells("A2:G2")
         ws["A2"] = meta_sub_str
         ws["A2"].font = Font(name="Calibri", size=9, italic=False, color="475569")
         ws["A2"].alignment = Alignment(horizontal="left", vertical="center")
-        
+
         # Row 3: Report Title
         ws.merge_cells("A3:G3")
         ws["A3"] = title.upper()
         ws["A3"].font = Font(name="Calibri", size=11, bold=True, color="4338CA")
         ws["A3"].alignment = Alignment(horizontal="left", vertical="center")
-        
+
         # Row 4: Generated Date & Filters
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
         ws.merge_cells("A4:G4")
         ws["A4"] = f"Generado el: {now_str} | Filtros: {filters_text}"
         ws["A4"].font = Font(name="Calibri", size=8.5, italic=True, color="64748B")
         ws["A4"].alignment = Alignment(horizontal="left", vertical="center")
-        
+
         return wb, ws
 
     @staticmethod
@@ -1874,7 +1874,7 @@ class FinancialReportExcelGenerator:
             bottom=Side(style='thin', color='CBD5E1')
         )
         alt_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
-        
+
         # Write headers
         for col_idx, h in enumerate(headers, 1):
             cell = ws.cell(row=start_row, column=col_idx, value=h)
@@ -1882,7 +1882,7 @@ class FinancialReportExcelGenerator:
             cell.fill = header_fill
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = thin_border
-        
+
         # Write data rows
         cur_row = start_row + 1
         for row_idx, r_data in enumerate(data_rows):
@@ -1893,7 +1893,7 @@ class FinancialReportExcelGenerator:
                 if is_alt:
                     cell.fill = alt_fill
                 cell.border = thin_border
-                
+
                 # Format
                 if col_idx in currency_cols:
                     cell.number_format = '$#,##0.00'
@@ -1905,7 +1905,7 @@ class FinancialReportExcelGenerator:
                 else:
                     cell.alignment = Alignment(horizontal="left", vertical="center")
             cur_row += 1
-            
+
         # Write totals row(s) if present
         if totals_row:
             rows_to_render = totals_row if (isinstance(totals_row, list) and len(totals_row) > 0 and isinstance(totals_row[0], (list, tuple))) else [totals_row]
@@ -1929,7 +1929,7 @@ class FinancialReportExcelGenerator:
                     else:
                         cell.alignment = Alignment(horizontal="left" if col_idx == 1 else "center", vertical="center")
                 cur_row += 1
-                    
+
         # Auto-adjust column widths
         for col in ws.columns:
             max_len = 0
@@ -1949,9 +1949,9 @@ class FinancialReportExcelGenerator:
             condo_address = condo_info["condo_address"]
         if condo_ruc is None:
             condo_ruc = condo_info["condo_ruc"]
-            
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        
+
         filters = report_data.get("filters", {})
         f_parts = []
         if filters.get("start_date") or filters.get("end_date"):
@@ -1961,9 +1961,9 @@ class FinancialReportExcelGenerator:
         if filters.get("category") and filters.get("category") != "all":
             f_parts.append(f"Cat: {filters.get('category')}")
         filters_str = " | ".join(f_parts) if f_parts else "Todos los registros"
-        
+
         wb, ws = FinancialReportExcelGenerator._create_base_workbook("Reporte de Recaudación y Pagos", condo_name, filters_str, condo_address=condo_address, condo_ruc=condo_ruc)
-        
+
         headers = ["Fecha", "Tipo / Concepto", "Depto", "Pagador / Responsable", "Referencia", "Estado", "Monto Base ($)", "Multa ($)", "Total Recaudado ($)"]
         data_rows = []
         for r in report_data.get("rows", []):
@@ -1978,7 +1978,7 @@ class FinancialReportExcelGenerator:
                 float(r.get("late_fee", 0.0) or 0.0),
                 float(r.get("amount", 0.0) or 0.0)
             ])
-            
+
         reconciled_rows = [r for r in report_data.get("rows", []) if r.get("is_reconciled", True)]
         unreconciled_rows = [r for r in report_data.get("rows", []) if not r.get("is_reconciled", True)]
 
@@ -1999,12 +1999,12 @@ class FinancialReportExcelGenerator:
             [f"SUBTOTAL NO CONCILIADOS - ESTADO DE CUENTA ({len(unreconciled_rows)}):", "", "", "", "", "", tot_unrec_base, tot_unrec_fee, tot_unrec],
             ["GRAN TOTAL GLOBAL:", "", "", "", "", "", tot_base, tot_fee, tot_all]
         ]
-        
+
         FinancialReportExcelGenerator._style_table(
             ws, start_row=6, headers=headers, data_rows=data_rows, totals_row=totals_rows,
             currency_cols=[7, 8, 9], date_cols=[1], center_cols=[3, 6]
         )
-        
+
         wb.save(dest_path)
         return dest_path
 
@@ -2017,9 +2017,9 @@ class FinancialReportExcelGenerator:
             condo_address = condo_info["condo_address"]
         if condo_ruc is None:
             condo_ruc = condo_info["condo_ruc"]
-            
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        
+
         filters = report_data.get("filters", {})
         f_parts = []
         if filters.get("unit") and filters.get("unit") != "all":
@@ -2029,9 +2029,9 @@ class FinancialReportExcelGenerator:
         if filters.get("status_filter") and filters.get("status_filter") != "all":
             f_parts.append(f"Estado: {filters.get('status_filter')}")
         filters_str = " | ".join(f_parts) if f_parts else "Todas las unidades"
-        
+
         wb, ws = FinancialReportExcelGenerator._create_base_workbook("Reporte de Deudores y Cartera Vencida", condo_name, filters_str, condo_address=condo_address, condo_ruc=condo_ruc)
-        
+
         headers = ["Depto", "Propietario", "Teléfono", "Email", "Períodos Pendientes", "Alícuotas Impagas ($)", "Multas ($)", "Cargos Extras ($)", "Deuda Total ($)", "Estado Morosidad"]
         data_rows = []
         for r in report_data.get("rows", []):
@@ -2047,18 +2047,18 @@ class FinancialReportExcelGenerator:
                 float(r.get("total_debt", 0.0) or 0.0),
                 r.get("morosity_level") or "-"
             ])
-            
+
         tot_al = sum(r.get("aliquots_debt", 0.0) for r in report_data.get("rows", []))
         tot_fee = sum(r.get("late_fees", 0.0) for r in report_data.get("rows", []))
         tot_chg = sum(r.get("charges_debt", 0.0) for r in report_data.get("rows", []))
         tot_sum = sum(r.get("total_debt", 0.0) for r in report_data.get("rows", []))
         totals_row = ["TOTALES:", "", "", "", "", tot_al, tot_fee, tot_chg, tot_sum, ""]
-        
+
         FinancialReportExcelGenerator._style_table(
             ws, start_row=6, headers=headers, data_rows=data_rows, totals_row=totals_row,
             currency_cols=[6, 7, 8, 9], date_cols=[], center_cols=[1, 10]
         )
-        
+
         wb.save(dest_path)
         return dest_path
 
@@ -2071,9 +2071,9 @@ class FinancialReportExcelGenerator:
             condo_address = condo_info["condo_address"]
         if condo_ruc is None:
             condo_ruc = condo_info["condo_ruc"]
-            
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        
+
         filters = report_data.get("filters", {})
         f_parts = []
         if filters.get("start_date") or filters.get("end_date"):
@@ -2081,9 +2081,9 @@ class FinancialReportExcelGenerator:
         if filters.get("record_type") and filters.get("record_type") != "all":
             f_parts.append(f"Tipo: {filters.get('record_type')}")
         filters_str = " | ".join(f_parts) if f_parts else "Todos los pendientes"
-        
+
         wb, ws = FinancialReportExcelGenerator._create_base_workbook("Reporte de Comprobantes Sin Conciliar", condo_name, filters_str, condo_address=condo_address, condo_ruc=condo_ruc)
-        
+
         headers = ["Origen / Tipo", "Fecha", "Depto", "Propietario", "Referencia", "Monto ($)", "Detalle / Concepto", "Estado", "Sugerencia"]
         data_rows = []
         for r in report_data.get("rows", []):
@@ -2098,15 +2098,15 @@ class FinancialReportExcelGenerator:
                 r.get("status") or "-",
                 r.get("suggestion") or "-"
             ])
-            
+
         tot_unrec = sum(r.get("amount", 0.0) for r in report_data.get("rows", []))
         totals_row = ["TOTAL SIN CONCILIAR:", "", "", "", "", tot_unrec, "", "", ""]
-        
+
         FinancialReportExcelGenerator._style_table(
             ws, start_row=6, headers=headers, data_rows=data_rows, totals_row=totals_row,
             currency_cols=[6], date_cols=[2], center_cols=[3, 8]
         )
-        
+
         wb.save(dest_path)
         return dest_path
 

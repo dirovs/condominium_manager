@@ -20,11 +20,18 @@ def reset_database(interactive_confirmed=False):
         print("y confirme la acción de forma interactiva en la consola.")
         print("=======================================================\n")
         return False
-        
+
     try:
         # Initialize SheetsManager (which connects to the db or creates it)
         sm = SheetsManager()
-        
+
+        # Enforce production safeguard
+        app_mode = str(sm.config.get("app_mode", "") or os.environ.get("APP_MODE", "")).lower()
+        if app_mode == "produccion":
+            print("\n[OPERACIÓN BLOQUEADA POR SEGURIDAD] La aplicación está en modo 'produccion'.")
+            print("El borrado de la base de datos está estrictamente prohibido en entornos de producción.\n")
+            return False
+
         # Clean all transaction and master tables except superadmin user
         with Session(sm.engine) as session:
             # Delete table rows using exact table names under explicit user confirmation
@@ -37,23 +44,26 @@ def reset_database(interactive_confirmed=False):
             session.execute(text("DELETE FROM other_incomes"))
             session.execute(text("DELETE FROM board_members"))
             session.execute(text("DELETE FROM users WHERE role != 'superadmin'"))
-            
-            # Ensure superadmin user exists using clean SQLModel syntax
+
+            # Ensure superadmin user exists using secure hashing
+            from security import get_password_hash
             superadmin = session.exec(select(User).where(User.role == "superadmin")).first()
             if not superadmin:
-                default_password_hash = hashlib.sha256("super123".encode()).hexdigest()
+                init_pwd = os.environ.get("SUPERADMIN_INITIAL_PASSWORD", "SuperAdmin@2026!ChangeMe")
                 superadmin = User(
                     cedula="9999999999",
                     email="superadmin@condo.com",
                     name="Super Administrador",
                     role="superadmin",
-                    password_hash=default_password_hash,
+                    password_hash=get_password_hash(init_pwd),
+                    temp_password=init_pwd,  # Forces password change on first login
                     is_active=True
                 )
                 session.add(superadmin)
-                
+
             session.commit()
-            
+
+
         print("\n=======================================================")
         print("BASE DE DATOS LIMPIA CON ÉXITO")
         print("=======================================================")

@@ -50,11 +50,10 @@ def get_fernet() -> Optional[Fernet]:
         _fernet_instance = Fernet(new_key)
         return _fernet_instance
     except Exception as e:
-        # Fallback deterministic key based on machine / environment salt
-        salt = os.path.abspath(os.path.dirname(__file__)).encode("utf-8")
-        deterministic_key = base64.urlsafe_b64encode(hashlib.sha256(b"condo_manager_master_key_" + salt).digest())
-        _fernet_instance = Fernet(deterministic_key)
-        return _fernet_instance
+        raise RuntimeError(
+            f"[Crypto Error] No se pudo inicializar la clave de cifrado ni escribir en '{SECRET_KEY_PATH}'. "
+            f"Por favor configure la variable de entorno SECRET_ENCRYPTION_KEY o garantice permisos de escritura. Error: {e}"
+        )
 
 def is_encrypted(val: Optional[str]) -> bool:
     if not val or not isinstance(val, str):
@@ -104,6 +103,10 @@ def decrypt_secret(cipher_text: Optional[str]) -> str:
     try:
         decrypted = fernet.decrypt(cipher_text.encode("utf-8"))
         return decrypted.decode("utf-8")
-    except Exception:
-        # If decryption fails (e.g. key changed or plain text), return as-is
+    except InvalidToken:
+        print("[Crypto Error] Fallo al descifrar token Fernet: clave de cifrado inválida o token corrupto.")
         return cipher_text
+    except Exception as e:
+        print(f"[Crypto Error] Error inesperado al descifrar: {e}")
+        return cipher_text
+

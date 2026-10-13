@@ -1,12 +1,14 @@
 # Python & Virtual Environments
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
 venv/
 env/
+.venv/
 .env
+.env.*
 
-# Database & SQLite files
+# Databases & Local SQLite
 *.db
 *.sqlite
 *.sqlite3
@@ -14,19 +16,26 @@ condo_manager.db
 condo_manager_test.db
 condominium.db
 
-# Secrets and local credentials
+# Secrets, API Keys & Local Configurations
 config.json
 .secret_key
 service_account.json
 google_credentials.json
 
-# Local static uploads and temporary test receipts
+# Local static uploads, generated receipts and temporary test files
 static/uploads/*
 !static/uploads/.gitkeep
-static/receipts/*.pdf
+static/receipts/*
 !static/receipts/.gitkeep
 
-# IDE and OS files
+# Temporary test logs and backup files
+*.bak
+*.log
+local_database.json.bak
+test_out.txt
+test_output.txt
+
+# IDE, Editor and OS metadata
 .vscode/
 .idea/
 .DS_Store

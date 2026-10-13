@@ -7,7 +7,7 @@ def test_receipt_generation():
     sm = SheetsManager()
     output_dir = os.path.join(os.path.dirname(__file__), "static", "receipts")
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # 1. Test unit with debt (passed explicitly or with debt)
     pdf_305 = os.path.join(output_dir, "test_recibo_305.pdf")
     ReceiptProcessor.generate_receipt_pdf(
@@ -28,7 +28,7 @@ def test_receipt_generation():
     assert os.path.exists(pdf_305)
     size_305 = os.path.getsize(pdf_305)
     print(f"Receipt 305 generated: {pdf_305} (Size: {size_305} bytes)")
-    
+
     # Extract text from 305 PDF
     text_305 = ReceiptProcessor.extract_text_from_pdf(pdf_305)
     print("--- TEXT IN RECEIPT 305 ---")
@@ -36,7 +36,7 @@ def test_receipt_generation():
     print("---------------------------")
     assert "DEUDA PENDIENTE REGISTRADA" in text_305 or "TOTAL DEUDA PENDIENTE" in text_305
     assert "$5.00" in text_305
-    
+
     # 2. Test unit with NO debt (101)
     pdf_101 = os.path.join(output_dir, "test_recibo_101.pdf")
     ReceiptProcessor.generate_receipt_pdf(
@@ -54,14 +54,14 @@ def test_receipt_generation():
     assert os.path.exists(pdf_101)
     size_101 = os.path.getsize(pdf_101)
     print(f"Receipt 101 generated: {pdf_101} (Size: {size_101} bytes)")
-    
+
     # Extract text from 101 PDF
     text_101 = ReceiptProcessor.extract_text_from_pdf(pdf_101)
     print("--- TEXT IN RECEIPT 101 ---")
     print(text_101)
     print("---------------------------")
     assert "AL DÍA" in text_101
-    
+
     print("\nALL RECEIPT PDF TESTS PASSED SUCCESSFULLY!")
 
 if __name__ == "__main__":

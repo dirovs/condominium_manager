@@ -1,25 +1,76 @@
 // CondoManager - Frontend Logic
 // Integrates statistics, charts, tables, forms, and WhatsApp simulator.
 
-// Intercept fetch globally to pass X-User-Role header
+function getAuthToken() {
+    if (currentUser && (currentUser.access_token || currentUser.token)) {
+        return currentUser.access_token || currentUser.token;
+    }
+    try {
+        const saved = JSON.parse(localStorage.getItem('currentUser'));
+        if (saved && (saved.access_token || saved.token)) {
+            return saved.access_token || saved.token;
+        }
+    } catch (e) {}
+    return null;
+}
+
+function getAuthUrl(url) {
+    if (!url) return url;
+    const token = getAuthToken();
+    if (!token) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
+window.getAuthUrl = getAuthUrl;
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+window.escapeHtml = escapeHtml;
+
+
+// Intercept fetch globally to pass Authorization Bearer and X-User-Role headers
 const originalFetch = window.fetch;
-window.fetch = function(url, options) {
+window.fetch = async function(url, options) {
     options = options || {};
     options.headers = options.headers || {};
-    if (currentUser && currentUser.role) {
-        if (options.headers instanceof Headers) {
-            if (!options.headers.has('X-User-Role')) {
-                options.headers.set('X-User-Role', currentUser.role);
-            }
-        } else if (Array.isArray(options.headers)) {
-            options.headers.push(['X-User-Role', currentUser.role]);
-        } else {
-            if (!options.headers['X-User-Role']) {
-                options.headers['X-User-Role'] = currentUser.role;
-            }
+    
+    const token = getAuthToken();
+    const role = currentUser ? currentUser.role : null;
+
+    if (options.headers instanceof Headers) {
+        if (token && !options.headers.has('Authorization')) {
+            options.headers.set('Authorization', `Bearer ${token}`);
+        }
+        if (role && !options.headers.has('X-User-Role')) {
+            options.headers.set('X-User-Role', role);
+        }
+    } else if (Array.isArray(options.headers)) {
+        if (token) options.headers.push(['Authorization', `Bearer ${token}`]);
+        if (role) options.headers.push(['X-User-Role', role]);
+    } else {
+        if (token && !options.headers['Authorization']) {
+            options.headers['Authorization'] = `Bearer ${token}`;
+        }
+        if (role && !options.headers['X-User-Role']) {
+            options.headers['X-User-Role'] = role;
         }
     }
-    return originalFetch(url, options);
+
+    const response = await originalFetch(url, options);
+    if (response.status === 401 && typeof url === 'string' && !url.includes('/api/auth/')) {
+        console.warn('Sesión no autorizada o token expirado (401). Cerrando sesión...');
+        if (typeof logoutUser === 'function') {
+            logoutUser();
+        }
+    }
+    return response;
 };
 
 let currentTab = 'resumen';
@@ -2527,19 +2578,19 @@ async function reconcileSelectedPair() {
 
 // Reports Exports Redirects
 function exportAliquotsCsv() {
-    window.location.href = '/api/aliquots/export/csv';
+    window.location.href = getAuthUrl('/api/aliquots/export/csv');
 }
 
 function exportExpensesCsv() {
-    window.location.href = '/api/expenses/export/csv';
+    window.location.href = getAuthUrl('/api/expenses/export/csv');
 }
 
 function exportDebtorsCsv() {
-    window.location.href = '/api/debtors/export/csv';
+    window.location.href = getAuthUrl('/api/debtors/export/csv');
 }
 
 function exportFinancialPdf() {
-    window.location.href = '/api/reports/financial-pdf';
+    window.location.href = getAuthUrl('/api/reports/financial-pdf');
 }
 
 async function handleUploadReceiptManual(e) {
@@ -3282,7 +3333,7 @@ function onLoginRoleChange() {
     if (role === 'superadmin' || role === 'admin') {
         cedulaInput.value = '9999999999';
         emailInput.value = 'superadmin@condo.com';
-        passwordInput.value = 'admin123';
+        passwordInput.value = '';
     } else {
         cedulaInput.value = '';
         emailInput.value = '';
@@ -3328,7 +3379,11 @@ async function handleLoginSubmit(e) {
 
         const data = await res.json();
         if (res.ok) {
-            currentUser = data.user;
+            currentUser = {
+                ...data.user,
+                access_token: data.access_token,
+                token_type: data.token_type
+            };
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             
             showToast(`¡Bienvenido, ${currentUser.name}!`);
@@ -3671,8 +3726,9 @@ function renderMyObligations() {
         if (o.status === 'Pendiente') {
             actionBtnHtml = `<button class="btn btn-primary-sm" style="display:flex; align-items:center; gap:4px; padding:6px 10px;" onclick="openUploadMyReceipt('${o.id}', '${o.type}')"><i data-lucide="upload-cloud" style="width:12px;height:12px;"></i> Registrar Pago</button>`;
         } else if (o.status === 'Pagado') {
+            const receiptLink = getAuthUrl(`/api/receipts/${o.type}/${o.id}/pdf`);
             actionBtnHtml = `<div style="display:flex; gap:4px; align-items:center;">
-                <a href="/api/receipts/${o.type}/${o.id}/pdf" target="_blank" class="btn btn-secondary-sm" style="display:flex; align-items:center; gap:4px; padding:6px 10px;" title="Ver / Imprimir Recibo Oficial"><i data-lucide="printer" style="width:12px;height:12px;"></i> Recibo</a>
+                <a href="${receiptLink}" target="_blank" class="btn btn-secondary-sm" style="display:flex; align-items:center; gap:4px; padding:6px 10px;" title="Ver / Imprimir Recibo Oficial"><i data-lucide="printer" style="width:12px;height:12px;"></i> Recibo</a>
                 <button class="btn btn-secondary-sm" style="display:flex; align-items:center; gap:4px; padding:6px 10px;" onclick="resendReceipt('${o.id}', '${o.type}')" title="Reenviar a mi correo"><i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Reenviar</button>
             </div>`;
         } else {
@@ -3840,7 +3896,7 @@ function downloadAdminCertificate() {
         showToast("Por favor selecciona un departamento.", "warning");
         return;
     }
-    window.open(`/api/units/${unit_id}/no-debt-certificate`, '_blank');
+    window.open(getAuthUrl(`/api/units/${unit_id}/no-debt-certificate`), '_blank');
     showToast(`Descargando Certificado de No Adeudar para Depto ${unit_id}...`);
 }
 
@@ -3860,7 +3916,7 @@ function emitAdminCertificate(unit_id) {
         openAdminCertificateModal(unit_id);
         showToast(`El Depto ${unit_id} registra valores pendientes de pago.`, 'warning');
     } else {
-        window.open(`/api/units/${unit_id}/no-debt-certificate`, '_blank');
+        window.open(getAuthUrl(`/api/units/${unit_id}/no-debt-certificate`), '_blank');
         showToast(`Certificado de No Adeudar generado para Depto ${unit_id}`, 'success');
     }
 }
@@ -4713,12 +4769,12 @@ function filterReportTableClientSide() {
 function exportCurrentReportPDF() {
     const params = getReportFilterParams();
     showToast("Generando reporte PDF...", "success");
-    window.location.href = `/api/reports/export/pdf?${params.toString()}`;
+    window.location.href = getAuthUrl(`/api/reports/export/pdf?${params.toString()}`);
 }
 
 function exportCurrentReportExcel() {
     const params = getReportFilterParams();
     showToast("Generando reporte Excel (.xlsx)...", "success");
-    window.location.href = `/api/reports/export/excel?${params.toString()}`;
+    window.location.href = getAuthUrl(`/api/reports/export/excel?${params.toString()}`);
 }
 

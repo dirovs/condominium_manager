@@ -156,7 +156,7 @@ def test_paid_additional_charges_report_amounts():
         "reference": "REF99999",
         "paid_by": "Residente Prueba"
     })
-    
+
     data = sm.get_payments_report_data(unit="909")
     target_row = next((r for r in data["rows"] if r["id"] == "TEST-AC-REPORT-99"), None)
     assert target_row is not None, "Target paid additional charge not found in report rows"
@@ -165,7 +165,7 @@ def test_paid_additional_charges_report_amounts():
     assert target_row["amount"] == 75.50, f"Expected amount 75.50, got {target_row['amount']}"
     assert data["kpis"]["total_collected"] >= 75.50
     assert data["kpis"]["total_charges"] >= 75.50
-    
+
     # Clean up
     sm.data["additional_charges"] = [c for c in sm.data["additional_charges"] if c["id"] != "TEST-AC-REPORT-99"]
     print("[OK] Paid Additional Charges in Payments Report test PASSED!")
@@ -182,7 +182,7 @@ def test_overdue_aliquots_debt_and_late_fees():
         "email1": "moroso@test.com",
         "aliquot_base": 70.0
     })
-    
+
     # 1. Add an overdue aliquot (Enero 2026 -> definitely past the 15th)
     aliquot_overdue = {
         "id": f"{test_unit}-2026-Enero",
@@ -196,7 +196,7 @@ def test_overdue_aliquots_debt_and_late_fees():
         "payment_date": "",
         "reference": ""
     }
-    
+
     # 2. Add an additional charge of $30.00
     charge_extra = {
         "id": f"AC-{test_unit}",
@@ -209,14 +209,14 @@ def test_overdue_aliquots_debt_and_late_fees():
         "payment_date": "",
         "reference": ""
     }
-    
+
     sm.data["aliquots"].append(aliquot_overdue)
     sm.data["additional_charges"].append(charge_extra)
-    
+
     # Query debtors report for this unit
     rep = sm.get_debtors_report_data(unit=test_unit)
     target_row = next((r for r in rep["rows"] if r["unit"] == test_unit), None)
-    
+
     assert target_row is not None, "Target debtor unit not found in report"
     assert target_row["aliquots_debt"] == 70.0, f"Expected aliquots_debt 70.0, got {target_row['aliquots_debt']}"
     assert target_row["late_fees"] == 10.0, f"Expected late_fees 10.0, got {target_row['late_fees']}"
@@ -224,19 +224,19 @@ def test_overdue_aliquots_debt_and_late_fees():
     # Total debt must be 70 (aliquot) + 10 (late fee) + 30 (charge) = 110.00
     assert target_row["total_debt"] == 110.0, f"Expected total_debt 110.0, got {target_row['total_debt']}"
     assert "Multa: $10.00" in target_row["periods_str"]
-    
+
     # Check get_debtors summary as well
     debtors_sum = sm.get_debtors()
     d_entry = next((d for d in debtors_sum if d["unit"] == test_unit), None)
     assert d_entry is not None
     assert d_entry["total_debt"] == 110.0
     assert d_entry["late_fees"] == 10.0
-    
+
     # Clean up test records
     sm.data["units"] = [u for u in sm.data["units"] if u["id"] != test_unit]
     sm.data["aliquots"] = [a for a in sm.data["aliquots"] if a["id"] != aliquot_overdue["id"]]
     sm.data["additional_charges"] = [c for c in sm.data["additional_charges"] if c["id"] != charge_extra["id"]]
-    
+
     print("[OK] Overdue Aliquot Late Fee and Debt Calculation test PASSED!")
 
 if __name__ == "__main__":

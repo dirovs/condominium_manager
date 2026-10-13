@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # line too long
+    "E402",  # module level import not at top of file
+    "E722",  # bare except
+    "E712",  # comparison to True/False in test assertions
+    "F401",  # unused imports in re-exports
+    "F841",  # unused local variable in tests
+    "W291",  # trailing whitespace
+    "W293",  # blank line contains whitespace
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "test_security_phase1.py", "test_reports.py"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning"
+]

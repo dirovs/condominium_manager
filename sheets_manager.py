@@ -18,11 +18,11 @@ class SheetsManager:
         self.data = {}
         self.client = None
         self.spreadsheet = None
-        
+
         # Database setup: Strictly enforce configured db_type without silent fallback
         db_type = str(self.config.get("db_type", "sqlite")).strip().lower()
         self.current_db_url = self.build_db_url()
-        
+
         if db_type == "postgres":
             try:
                 self.engine = create_engine(self.current_db_url, echo=False)
@@ -41,13 +41,13 @@ class SheetsManager:
                 pass
             SQLModel.metadata.create_all(self.engine)
             self.run_migrations()
-        
+
         # Seed database if empty (superadmin, units, system_configs, initial_balances)
         self.seed_db_if_empty()
-        
+
         # Load active configuration from Database (decrypting secrets in memory)
         self.config = self.load_config()
-        
+
         self.load_data()
 
     def get_postgres_driver_prefix(self):
@@ -98,10 +98,10 @@ class SheetsManager:
             user = str(self.config.get("db_user", "")).strip()
             password = str(self.config.get("db_password", "")).strip()
             name = str(self.config.get("db_name", "")).strip()
-            
+
             user_enc = urllib.parse.quote_plus(user)
             pass_enc = urllib.parse.quote_plus(password)
-            
+
             driver_prefix = self.get_postgres_driver_prefix()
             if password:
                 return f"{driver_prefix}{user_enc}:{pass_enc}@{host}:{port}/{name}"
@@ -254,7 +254,7 @@ class SheetsManager:
                 try:
                     with open(DB_PATH, "r", encoding="utf-8") as f:
                         initial_data = json.load(f)
-                    
+
                     # Legacy Cédula Mapping for existing units
                     cedula_map = {
                         "101": ("1700000101", "1700000102"),
@@ -276,27 +276,27 @@ class SheetsManager:
                             u["cedula_owner"] = f"170000{unit_id}"
                             u["cedula_tenant"] = ""
                         session.add(Unit(**u))
-                    
+
                     # Seed Aliquots
                     for a in initial_data.get("aliquots", []):
                         session.add(Aliquot(**a))
-                        
+
                     # Seed Additional Charges
                     for c in initial_data.get("additional_charges", []):
                         session.add(AdditionalCharge(**c))
-                        
+
                     # Seed Expenses
                     for e in initial_data.get("expenses", []):
                         session.add(Expense(**e))
-                        
+
                     # Seed Bank statement
                     for b in initial_data.get("bank_statement", []):
                         session.add(BankTransaction(**b))
-                        
+
                     # Seed Notification Logs
                     for n in initial_data.get("notification_logs", []):
                         session.add(NotificationLog(**n))
-                        
+
                     session.commit()
                     print("[DB Migration] Initial data successfully migrated to condo_manager.db")
                 except Exception as err:
@@ -375,7 +375,7 @@ class SheetsManager:
                         cfg["db_custom_url"] = decrypt_secret(db_cfg.db_custom_url)
                         if db_cfg.google_credentials_json:
                             cfg["google_credentials_json"] = decrypt_secret(db_cfg.google_credentials_json)
-                            
+
                         if db_bal:
                             cfg["initial_bank_balance"] = float(db_bal.initial_bank_balance or 0.0)
                             cfg["initial_reserve_fund"] = float(db_bal.initial_reserve_fund or 0.0)
@@ -383,7 +383,7 @@ class SheetsManager:
                             cfg["initial_bank_balance"] = 0.0
                             cfg["initial_reserve_fund"] = 0.0
                         return cfg
-            except Exception as e:
+            except Exception:
                 pass
 
         # 2. Fallback to file or defaults
@@ -392,7 +392,7 @@ class SheetsManager:
     def save_config(self):
         # We temporarily update engine mode. If it fails, it will raise ValueError and NOT save to file!
         self.update_engine_mode()
-        
+
         # Save to database if engine is connected
         if getattr(self, "engine", None):
             try:
@@ -401,7 +401,7 @@ class SheetsManager:
                         if not db_cfg:
                             db_cfg = SystemConfig(id=1)
                             session.add(db_cfg)
-                            
+
                         for k, v in self.config.items():
                             if hasattr(db_cfg, k):
                                 if k in ["smtp_password", "twilio_token", "meta_wa_token", "meta_wa_verify_token", "db_password", "db_custom_url", "google_credentials_json"]:
@@ -409,7 +409,7 @@ class SheetsManager:
                                 else:
                                     setattr(db_cfg, k, v)
                         db_cfg.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        
+
                         db_bal = session.exec(select(InitialBalance).where(InitialBalance.id == 1)).first()
                         if not db_bal:
                             db_bal = InitialBalance(id=1)
@@ -417,11 +417,11 @@ class SheetsManager:
                         db_bal.initial_bank_balance = float(self.config.get("initial_bank_balance", 0.0))
                         db_bal.initial_reserve_fund = float(self.config.get("initial_reserve_fund", 0.0))
                         db_bal.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        
+
                         session.commit()
             except Exception as err:
                 print(f"[DB Error] Error saving config to database: {err}")
-                
+
         # Also write a clean config.json for fallback / offline reference
         try:
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -438,11 +438,11 @@ class SheetsManager:
                 temp_engine = create_engine(db_url, echo=False)
                 with temp_engine.connect() as conn:
                     pass
-                
+
                 # If connection succeeds, apply
                 self.current_db_url = db_url
                 self.engine = temp_engine
-                
+
                 # Setup tables and load data
                 SQLModel.metadata.create_all(self.engine)
                 self.run_migrations()
@@ -469,7 +469,7 @@ class SheetsManager:
             "system_config": None,
             "initial_balances": None
         }
-        
+
         # Load from SQLite / PostgreSQL
         try:
             with Session(self.engine) as session:
@@ -551,8 +551,8 @@ class SheetsManager:
             item = {}
             for k, v in r.items():
                 key_map = {
-                    "ID": "id", "Unidad": "unit", "Mes": "month", "Año": "year", 
-                    "Monto": "amount", "Multa": "late_fee", "FechaPago": "payment_date", 
+                    "ID": "id", "Unidad": "unit", "Mes": "month", "Año": "year",
+                    "Monto": "amount", "Multa": "late_fee", "FechaPago": "payment_date",
                     "Referencia": "reference", "Estado": "status", "Propietario": "owner",
                     "AlicuotaBase": "aliquot_base", "Tipo": "type", "Descripción": "description",
                     "FechaEmisión": "issue_date", "Fecha": "date", "Categoría": "category",
@@ -571,7 +571,7 @@ class SheetsManager:
                     "PagadoPor": "paid_by"
                 }
                 mapped_key = key_map.get(k, k.lower())
-                
+
                 # Format conversions
                 if mapped_key in ["amount", "late_fee", "aliquot_base"]:
                     try:
@@ -598,7 +598,7 @@ class SheetsManager:
             # Clear all except header
             worksheet.resize(rows=1)
             worksheet.resize(rows=1000)
-            
+
             rows = []
             for item in data_list:
                 row = []
@@ -620,7 +620,7 @@ class SheetsManager:
             user = session.exec(select(User).where(User.email == unit["email1"])).first()
             if not user:
                 user = session.exec(select(User).where(User.cedula == unit["cedula_owner"])).first()
-            
+
             if not user:
                 user = User(
                     cedula=unit["cedula_owner"],
@@ -637,13 +637,13 @@ class SheetsManager:
                 user.role = "owner"
                 user.is_active = True
                 session.add(user)
-        
+
         # Synchronize tenant
         if unit.get("cedula_tenant") and unit.get("email2"):
             user = session.exec(select(User).where(User.email == unit["email2"])).first()
             if not user:
                 user = session.exec(select(User).where(User.cedula == unit["cedula_tenant"])).first()
-            
+
             if not user:
                 user = User(
                     cedula=unit["cedula_tenant"],
@@ -668,23 +668,23 @@ class SheetsManager:
                 for u in self.data["units"]:
                     session.merge(Unit(**u))
                     self.sync_user_from_unit(session, u)
-                
+
                 # Merge Aliquots
                 for a in self.data["aliquots"]:
                     session.merge(Aliquot(**a))
-                
+
                 # Merge Additional Charges
                 for c in self.data["additional_charges"]:
                     session.merge(AdditionalCharge(**c))
-                
+
                 # Merge Expenses
                 for e in self.data["expenses"]:
                     session.merge(Expense(**e))
-                
+
                 # Merge Bank Transactions
                 for b in self.data["bank_statement"]:
                     session.merge(BankTransaction(**b))
-                
+
                 # Merge Notification Logs correctly handling new auto-increment IDs
                 for n in self.data["notification_logs"]:
                     if n.get("id") is None:
@@ -694,7 +694,7 @@ class SheetsManager:
                         n["id"] = db_n.id
                     else:
                         session.merge(NotificationLog(**n))
-                        
+
                 # Merge Other Incomes correctly handling new auto-increment IDs
                 for o in self.data["other_incomes"]:
                     if o.get("id") is None:
@@ -704,7 +704,7 @@ class SheetsManager:
                         o["id"] = db_o.id
                     else:
                         session.merge(OtherIncome(**o))
-                        
+
                 # Merge Board Members correctly handling new auto-increment IDs
                 for m in self.data["board_members"]:
                     if m.get("id") is None:
@@ -714,7 +714,7 @@ class SheetsManager:
                         m["id"] = db_m.id
                     else:
                         session.merge(BoardMember(**m))
-                        
+
                 session.commit()
         except Exception as e:
             safe_err = str(e).encode('ascii', errors='replace').decode('ascii')
@@ -743,7 +743,7 @@ class SheetsManager:
             unit_bases[u["id"]] = float(u.get("aliquot_base", default_base))
 
         total_revenue = 0.0
-        
+
         # Aliquot revenue (full payments and partial abonos)
         for a in self.data["aliquots"]:
             # Exonerated board members do NOT generate money income
@@ -767,29 +767,29 @@ class SheetsManager:
                 total_revenue += paid if paid > 0.0 else amt
             elif paid > 0.0:
                 total_revenue += paid
-                
+
         # Other incomes revenue (bank interest, rentals, donations, miscellaneous)
         total_revenue += sum(float(o.get("amount", 0.0) or 0.0) for o in self.data.get("other_incomes", []))
-        
+
         total_expenses = sum(e["amount"] for e in self.data["expenses"])
-        
+
         # Calculate debtors list
         debtors_summary = self.get_debtors()
         total_debt = sum(d["total_debt"] for d in debtors_summary)
-        
+
         # Calculate monthly collection progress for the current/latest month
         months_order = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
         now = datetime.now()
         current_month = months_order[now.month - 1]
         current_year = now.year
-        
+
         curr_month_aliquots = [a for a in self.data["aliquots"] if a["month"] == current_month and int(a["year"]) == current_year and a.get("status") != "Exonerado"]
         if not curr_month_aliquots and self.data["aliquots"]:
             latest_aliquot = max(self.data["aliquots"], key=lambda x: (int(x.get("year", 0)), months_order.index(x.get("month", "Enero")) if x.get("month") in months_order else 0))
             current_month = latest_aliquot.get("month")
             current_year = int(latest_aliquot.get("year"))
             curr_month_aliquots = [a for a in self.data["aliquots"] if a["month"] == current_month and int(a["year"]) == current_year and a.get("status") != "Exonerado"]
-            
+
         paid_curr = sum(1 for a in curr_month_aliquots if a["status"] == "Pagado")
         total_curr = len(curr_month_aliquots)
         progress = (paid_curr / total_curr * 100) if total_curr > 0 else 0
@@ -798,7 +798,7 @@ class SheetsManager:
             initial_balance = float(self.data["initial_balances"]["initial_bank_balance"])
         else:
             initial_balance = float(self.config.get("initial_bank_balance", 0.0))
-        
+
         return {
             "total_revenue": total_revenue,
             "total_expenses": total_expenses,
@@ -825,7 +825,7 @@ class SheetsManager:
                 "total_debt": 0.0,
                 "details": []
             }
-            
+
         def _get_entry(raw_uid):
             clean_uid = str(raw_uid).strip()
             if clean_uid not in debtors:
@@ -846,10 +846,10 @@ class SheetsManager:
         for a in self.data["aliquots"]:
             if a.get("status") in ["Pendiente", "Validación Manual"]:
                 unit_entry = _get_entry(a.get("unit"))
-                
+
                 stored_fee = float(a.get("late_fee", 0.0) or 0.0)
                 amt = float(a.get("amount", 0.0) or 0.0)
-                
+
                 if amt > 0:
                     implied_fee = self.calculate_pending_aliquot_late_fee(
                         a.get("month"),
@@ -858,13 +858,13 @@ class SheetsManager:
                     )
                 else:
                     implied_fee = stored_fee
-                
+
                 if amt > 0 or implied_fee > 0:
                     if amt > 0:
                         unit_entry["unpaid_aliquots_count"] += 1
                     unit_entry["unpaid_aliquots_amount"] += amt
                     unit_entry["late_fees"] += implied_fee
-                    
+
                     if amt > 0 and implied_fee > 0:
                         detail_str = f"Alícuota {a.get('month')} {a.get('year')} ({self.config.get('currency', '$')}{amt:.2f}) + Multa ({self.config.get('currency', '$')}{implied_fee:.2f})"
                     elif amt > 0:
@@ -887,7 +887,7 @@ class SheetsManager:
             d["total_debt"] = round(d["unpaid_aliquots_amount"] + d["unpaid_charges_amount"] + d["late_fees"], 2)
             if d["total_debt"] > 0:
                 result.append(d)
-                
+
         # Sort by highest debt
         result.sort(key=lambda x: x["total_debt"], reverse=True)
         return result
@@ -933,28 +933,28 @@ class SheetsManager:
         """
         rows = []
         owner_map = {str(u["id"]): u for u in self.data["units"]}
-        
+
         # 1. Aliquots
         for a in self.data.get("aliquots", []):
             is_paid = (a.get("status") == "Pagado")
             paid_amount = float(a.get("paid_amount", 0.0) or 0.0)
             aliquot_amount = float(a.get("amount", 0.0) or 0.0)
             late_fee = float(a.get("late_fee", 0.0) or 0.0)
-            
+
             if is_paid or paid_amount > 0:
                 base_collected = paid_amount if (paid_amount > 0.0 and (not is_paid or aliquot_amount == 0.0)) else aliquot_amount
                 amount_collected = (base_collected + late_fee) if is_paid else paid_amount
                 pay_date = a.get("payment_date") or ""
                 unit_str = str(a.get("unit", ""))
                 u_obj = owner_map.get(unit_str, {})
-                
+
                 payer = a.get("paid_by") or a.get("owner_name") or u_obj.get("owner") or a.get("tenant_name") or u_obj.get("tenant") or self.get_receipt_recipient_name(unit_str)
-                
+
                 status_label = "Pagado Total" if is_paid else "Abono Parcial"
                 concept = f"Alícuota Ordinaria {a.get('month')} {a.get('year')}"
                 if not is_paid:
                     concept = f"Abono Alícuota {a.get('month')} {a.get('year')}"
-                    
+
                 rows.append({
                     "id": a.get("id"),
                     "date": pay_date,
@@ -977,19 +977,19 @@ class SheetsManager:
             is_paid = (c.get("status") == "Pagado")
             paid_amount = float(c.get("paid_amount", 0.0) or 0.0)
             charge_amount = float(c.get("amount", 0.0) or 0.0)
-            
+
             if is_paid or paid_amount > 0:
                 amount_collected = paid_amount if paid_amount > 0.0 else charge_amount
                 pay_date = c.get("payment_date") or c.get("issue_date") or ""
                 unit_str = str(c.get("unit", ""))
                 u_obj = owner_map.get(unit_str, {})
-                
+
                 payer = c.get("paid_by") or c.get("owner_name") or u_obj.get("owner") or c.get("tenant_name") or u_obj.get("tenant") or self.get_receipt_recipient_name(unit_str)
-                
+
                 charge_type = c.get("type") or "Cargo Adicional"
                 status_label = "Pagado Total" if is_paid else "Abono Parcial"
                 concept = f"{charge_type}: {c.get('description', '')}"
-                
+
                 rows.append({
                     "id": c.get("id"),
                     "date": pay_date,
@@ -1170,7 +1170,7 @@ class SheetsManager:
                 unit_entry = _get_entry(a.get("unit"))
                 base_amt = float(a.get("amount", 0.0) or 0.0)
                 stored_fee = float(a.get("late_fee", 0.0) or 0.0)
-                
+
                 if base_amt > 0:
                     late_fee = self.calculate_pending_aliquot_late_fee(
                         a.get("month"),
@@ -1179,13 +1179,13 @@ class SheetsManager:
                     )
                 else:
                     late_fee = stored_fee
-                
+
                 if base_amt > 0 or late_fee > 0:
                     if base_amt > 0:
                         unit_entry["unpaid_aliquots_count"] += 1
                     unit_entry["aliquots_debt"] += base_amt
                     unit_entry["late_fees"] += late_fee
-                    
+
                     if base_amt > 0 and late_fee > 0:
                         period_str = f"{a.get('month')} {a.get('year')} ({self.config.get('currency', '$')}{base_amt:.2f} + Multa: {self.config.get('currency', '$')}{late_fee:.2f})"
                     elif base_amt > 0:
@@ -1210,7 +1210,7 @@ class SheetsManager:
             d["aliquots_debt"] = round(d["aliquots_debt"], 2)
             d["late_fees"] = round(d["late_fees"], 2)
             d["charges_debt"] = round(d["charges_debt"], 2)
-            
+
             # Determine Morosity Level
             months_cnt = d["unpaid_aliquots_count"]
             if d["total_debt"] <= 0.01:
@@ -1222,7 +1222,7 @@ class SheetsManager:
             else:
                 d["morosity_level"] = f"Mora Crítica ({months_cnt} meses)" if months_cnt > 1 else "Mora (Cargos Pendientes)"
                 d["morosity_badge"] = "danger"
-                
+
             d["periods_str"] = ", ".join(d["unpaid_periods"]) if d["unpaid_periods"] else "-"
             d["charges_str"] = ", ".join(d["unpaid_charges"]) if d["unpaid_charges"] else "-"
 
@@ -1238,7 +1238,7 @@ class SheetsManager:
                     continue
                 elif status_filter == "up_to_date" and d["total_debt"] > 0.01:
                     continue
-                    
+
             rows.append(d)
 
         # Sort by total debt descending
@@ -1281,7 +1281,7 @@ class SheetsManager:
         """
         rows = []
         owner_map = {str(u["id"]): u.get("owner", "") for u in self.data.get("units", [])}
-        
+
         # 1. Aliquots in Validación Manual
         for a in self.data.get("aliquots", []):
             if a.get("status") == "Validación Manual":
@@ -1389,7 +1389,110 @@ class SheetsManager:
             }
         }
 
+    def get_monthly_closing_report_data(self, month=None, year=None):
+        """
+        Calculates and compiles the monthly financial closing summary:
+        - Opening bank balance
+        - Total income reconciled in period (aliquots, additional charges, other incomes)
+        - Total expenses registered in period
+        - Net operational balance for period
+        - Closing theoretical bank balance
+        - Bank statement comparison & reconciliation integrity
+        """
+        if not year:
+            year = datetime.now().year
+        year = int(year)
+        
+        months_map = {
+            1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+            5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+            9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+        }
+        
+        if not month:
+            month_name = months_map[datetime.now().month]
+            month_num = datetime.now().month
+        elif isinstance(month, int) or (isinstance(month, str) and month.isdigit()):
+            month_num = int(month)
+            month_name = months_map.get(month_num, "Enero")
+        else:
+            month_name = str(month).strip().capitalize()
+            month_num = next((k for k, v in months_map.items() if v.lower() == month_name.lower()), datetime.now().month)
+
+        initial_bank_bal = float(self.config.get("initial_bank_balance", 0.0))
+        
+        aliquots_income = 0.0
+        aliquots_count = 0
+        for a in self.data.get("aliquots", []):
+            if str(a.get("month", "")).strip().lower() == month_name.lower() and int(a.get("year", 0)) == year:
+                if a.get("status") == "Pagado":
+                    aliquots_income += float(a.get("paid_amount", 0.0) or a.get("amount", 0.0)) + float(a.get("late_fee", 0.0))
+                    aliquots_count += 1
+                elif a.get("status") == "Abono":
+                    aliquots_income += float(a.get("paid_amount", 0.0))
+                    aliquots_count += 1
+                    
+        charges_income = 0.0
+        charges_count = 0
+        for c in self.data.get("additional_charges", []):
+            p_date = str(c.get("payment_date", "") or "")
+            if c.get("status") == "Pagado":
+                if p_date.startswith(f"{year}-{month_num:02d}") or (not p_date and str(c.get("month", "")).lower() == month_name.lower()):
+                    charges_income += float(c.get("amount", 0.0))
+                    charges_count += 1
+
+        other_incomes_total = 0.0
+        for inc in self.data.get("other_incomes", []):
+            i_date = str(inc.get("date", "") or "")
+            if i_date.startswith(f"{year}-{month_num:02d}"):
+                other_incomes_total += float(inc.get("amount", 0.0))
+
+        total_period_income = aliquots_income + charges_income + other_incomes_total
+
+        total_period_expenses = 0.0
+        expenses_list = []
+        for exp in self.data.get("expenses", []):
+            e_date = str(exp.get("date", "") or "")
+            if e_date.startswith(f"{year}-{month_num:02d}"):
+                amt = float(exp.get("amount", 0.0))
+                total_period_expenses += amt
+                expenses_list.append(exp)
+
+        period_net_result = total_period_income - total_period_expenses
+        closing_balance = initial_bank_bal + total_period_income - total_period_expenses
+
+        bank_total_reconciled = 0.0
+        bank_total_unreconciled = 0.0
+        for b in self.data.get("bank_statement", []):
+            b_date = str(b.get("date", "") or "")
+            if b_date.startswith(f"{year}-{month_num:02d}"):
+                if b.get("reconciled"):
+                    bank_total_reconciled += float(b.get("amount", 0.0))
+                else:
+                    bank_total_unreconciled += float(b.get("amount", 0.0))
+
+        return {
+            "period": f"{month_name} {year}",
+            "month": month_name,
+            "year": year,
+            "initial_balance": round(initial_bank_bal, 2),
+            "aliquots_income": round(aliquots_income, 2),
+            "aliquots_count": aliquots_count,
+            "charges_income": round(charges_income, 2),
+            "charges_count": charges_count,
+            "other_incomes": round(other_incomes_total, 2),
+            "total_income": round(total_period_income, 2),
+            "total_expenses": round(total_period_expenses, 2),
+            "expenses_count": len(expenses_list),
+            "period_net_result": round(period_net_result, 2),
+            "closing_balance": round(closing_balance, 2),
+            "bank_reconciled": round(bank_total_reconciled, 2),
+            "bank_unreconciled": round(bank_total_unreconciled, 2),
+            "reconciliation_difference": round(abs(total_period_income - bank_total_reconciled), 2)
+        }
+
     def add_expense(self, date, category, description, amount):
+
         exp_id = f"EXP-{len(self.data['expenses']) + 1}"
         expense = {
             "id": exp_id,
@@ -1410,12 +1513,12 @@ class SheetsManager:
                 break
         if not expense:
             return None
-            
+
         expense["date"] = date
         expense["category"] = category
         expense["description"] = description
         expense["amount"] = float(amount)
-        
+
         # update SQLite
         with Session(self.engine) as session:
             db_item = session.get(Expense, exp_id)
@@ -1425,7 +1528,7 @@ class SheetsManager:
                 db_item.description = description
                 db_item.amount = float(amount)
                 session.commit()
-                
+
         self.sync()
         return expense
 
@@ -1437,14 +1540,14 @@ class SheetsManager:
                 break
         if not expense:
             return False
-            
+
         # delete from SQLite
         with Session(self.engine) as session:
             db_item = session.get(Expense, exp_id)
             if db_item:
                 session.delete(db_item)
                 session.commit()
-                
+
         self.data["expenses"].remove(expense)
         self.sync()
         return True
@@ -1455,7 +1558,7 @@ class SheetsManager:
             ids = [o.get("id") for o in self.data["other_incomes"] if o.get("id")]
             if ids:
                 next_id = max(ids) + 1
-        
+
         other_inc = {
             "id": next_id,
             "date": date,
@@ -1464,13 +1567,13 @@ class SheetsManager:
             "reference": reference
         }
         self.data["other_incomes"].append(other_inc)
-        
+
         if reference:
             for b in self.data["bank_statement"]:
                 if b["reference"] == reference:
                     b["reconciled"] = True
                     break
-        
+
         self.sync()
         return other_inc
 
@@ -1482,15 +1585,15 @@ class SheetsManager:
                 break
         if not other_inc:
             return None
-            
+
         old_ref = other_inc.get("reference", "")
-        
+
         # update fields
         other_inc["date"] = date
         other_inc["concept"] = concept
         other_inc["amount"] = float(amount)
         other_inc["reference"] = reference
-        
+
         # update bank statements reconciliation status if reference changed
         if old_ref != reference:
             if old_ref:
@@ -1503,7 +1606,7 @@ class SheetsManager:
                     if b["reference"] == reference:
                         b["reconciled"] = True
                         break
-                        
+
         # update SQLite
         with Session(self.engine) as session:
             db_item = session.get(OtherIncome, item_id)
@@ -1513,7 +1616,7 @@ class SheetsManager:
                 db_item.amount = float(amount)
                 db_item.reference = reference
                 session.commit()
-                
+
         self.sync()
         return other_inc
 
@@ -1525,14 +1628,14 @@ class SheetsManager:
                 break
         if not other_inc:
             return False
-            
+
         ref = other_inc.get("reference", "")
         if ref:
             for b in self.data["bank_statement"]:
                 if b["reference"] == ref:
                     b["reconciled"] = False
                     break
-                    
+
         # Also clean up database record directly if needed, but since sync() merges all,
         # we must delete it from the SQLite database.
         # Wait! To delete a record from SQLite database when we delete it from self.data,
@@ -1545,7 +1648,7 @@ class SheetsManager:
             if db_item:
                 session.delete(db_item)
                 session.commit()
-                
+
         self.data["other_incomes"].remove(other_inc)
         self.sync()
         return True
@@ -1596,22 +1699,22 @@ class SheetsManager:
         new_ref_clean = str(new_reference).strip()
         if not new_ref_clean:
             raise ValueError("El número de referencia no puede estar vacío.")
-            
+
         tx_found = None
         for b in self.data["bank_statement"]:
             if str(b.get("reference", "")).strip().lower() == old_ref_clean.lower():
                 tx_found = b
                 break
-                
+
         if not tx_found:
             return None
-            
+
         # If reference changed, verify uniqueness
         if old_ref_clean.lower() != new_ref_clean.lower():
             for b in self.data["bank_statement"]:
                 if str(b.get("reference", "")).strip().lower() == new_ref_clean.lower() and b is not tx_found:
                     raise ValueError(f"Ya existe una transacción bancaria con la referencia {new_ref_clean}.")
-                    
+
         tx_found["reference"] = new_ref_clean
         if date is not None:
             tx_found["date"] = date
@@ -1619,7 +1722,7 @@ class SheetsManager:
             tx_found["amount"] = float(amount)
         if detail is not None:
             tx_found["detail"] = detail
-            
+
         with Session(self.engine) as session:
             db_tx = session.exec(select(BankTransaction).where(BankTransaction.reference == old_reference)).first()
             if db_tx:
@@ -1641,7 +1744,7 @@ class SheetsManager:
                     db_tx.detail = tx_found["detail"]
                     session.add(db_tx)
                     session.commit()
-                    
+
         self.sync()
         return tx_found
 
@@ -1660,10 +1763,10 @@ class SheetsManager:
                     self.sync()
                     return True
             return False
-        
+
         # Remove from memory list
         self.data["additional_charges"] = [c for c in self.data["additional_charges"] if c["id"] != charge_id]
-        
+
         # Remove from Database
         with Session(self.engine) as session:
             db_c = session.exec(select(AdditionalCharge).where(AdditionalCharge.id == charge_id)).first()
@@ -1689,13 +1792,13 @@ class SheetsManager:
         existing_refs = {str(b["reference"]).strip().lower() for b in self.data["bank_statement"] if b.get("reference")}
         added_count = 0
         duplicate_count = 0
-        
+
         for tx in transactions:
             ref = str(tx.get("reference", "")).strip()
             if ref and ref.lower() in existing_refs:
                 duplicate_count += 1
                 continue
-                
+
             new_tx = {
                 "date": tx.get("date", datetime.now().strftime("%Y-%m-%d")),
                 "reference": ref,
@@ -1707,10 +1810,10 @@ class SheetsManager:
             if ref:
                 existing_refs.add(ref.lower())
             added_count += 1
-            
+
         if added_count > 0:
             self.sync()
-            
+
         return added_count, duplicate_count
 
     def delete_bank_transaction(self, reference):
@@ -1722,7 +1825,7 @@ class SheetsManager:
                 break
         if not tx_found:
             return False
-            
+
         # If the bank transaction was reconciled, automatically revert associated payments
         if tx_found.get("reconciled"):
             # Check and revert matching aliquots
@@ -1730,16 +1833,16 @@ class SheetsManager:
                 a_ref = str(a.get("reference", "")).strip().lower()
                 if a_ref and (a_ref == ref_str or ref_str in a_ref):
                     self.undo_payment(a["id"], "aliquot")
-                    
+
             # Check and revert matching additional charges
             for c in list(self.data["additional_charges"]):
                 c_ref = str(c.get("reference", "")).strip().lower()
                 if c_ref and (c_ref == ref_str or ref_str in c_ref):
                     self.undo_payment(c["id"], "charge")
-                    
+
         # Remove from in-memory list
         self.data["bank_statement"] = [b for b in self.data["bank_statement"] if str(b["reference"]).strip().lower() != ref_str]
-        
+
         # Remove from database
         with Session(self.engine) as session:
             db_tx = session.exec(select(BankTransaction).where(BankTransaction.reference == reference)).first()
@@ -1748,7 +1851,7 @@ class SheetsManager:
             if db_tx:
                 session.delete(db_tx)
                 session.commit()
-                
+
         self.sync()
         return True
 
@@ -1814,7 +1917,7 @@ class SheetsManager:
                 limit_day = min(limit_day, 30)
 
             deadline = datetime(target_year, target_month, limit_day, 23, 59, 59)
-            
+
             if check_date is None:
                 current_time = datetime.now()
             elif isinstance(check_date, str):
@@ -1828,7 +1931,7 @@ class SheetsManager:
                 return float(self.config.get("late_fee_amount", 10.0))
         except Exception as e:
             print(f"Error calculating pending aliquot late fee: {e}")
-            
+
         return 0.0
 
     def check_late_fee(self, payment_date_str, month_name, year):
@@ -1840,17 +1943,17 @@ class SheetsManager:
                 normalized_date = payment_date_str
             pay_date = datetime.strptime(normalized_date, "%Y-%m-%d")
             limit_day = int(self.config.get("late_fee_day", 15))
-            
+
             # Map month name to index
             month_map = {
                 "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
                 "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12
             }
             target_month = month_map.get(str(month_name).strip().lower(), 1)
-            
+
             # Create deadline date: limit_day of target_month in target_year
             deadline = datetime(year=int(year), month=target_month, day=limit_day)
-            
+
             # If payment is after deadline, apply late fee
             if pay_date > deadline:
                 return float(self.config.get("late_fee_amount", 10.0))
@@ -1860,21 +1963,21 @@ class SheetsManager:
 
     def reconcile_payment(self, unit, month, year, amount, reference, payment_date, late_fee=None, recipient_override=None, reset_existing=False):
         amount = float(amount)
-        
+
         # Get base amount for this unit
         base_amt = float(self.config.get("default_aliquot_base", 70.0))
         for u in self.data["units"]:
             if u["id"] == str(unit):
                 base_amt = float(u.get("aliquot_base", base_amt))
                 break
-                
+
         # Find aliquot record
         aliquot = None
         for a in self.data["aliquots"]:
             if a["unit"] == str(unit) and a["month"].lower() == month.lower() and int(a["year"]) == int(year):
                 aliquot = a
                 break
-                 
+
         if not aliquot:
             aliquot = {
                 "id": f"{unit}-{year}-{month}",
@@ -1904,17 +2007,17 @@ class SheetsManager:
             late_fee = self.check_late_fee(payment_date, month, year)
         else:
             late_fee = float(late_fee)
-        
+
         # Calculate payment breakdown
         total_due = aliquot["amount"] + late_fee
-        
+
         aliquot_paid = 0.0
         late_fee_paid = 0.0
         abono_deuda = 0.0
         pago_extra = 0.0
         saldo_deuda = 0.0
         advance_aliquots = []
-        
+
         if amount < total_due:
             # Prioritize paying base aliquot first
             if amount <= aliquot["amount"]:
@@ -1923,12 +2026,12 @@ class SheetsManager:
             else:
                 aliquot_paid = aliquot["amount"]
                 rem = amount - aliquot_paid
-                
+
             if rem > 0 and late_fee > 0:
                 late_fee_paid = min(rem, late_fee)
             else:
                 late_fee_paid = 0.0
-                
+
             aliquot["amount"] -= aliquot_paid
             aliquot["paid_amount"] = (aliquot.get("paid_amount") or 0.0) + aliquot_paid
             aliquot["late_fee"] = late_fee - late_fee_paid
@@ -1939,7 +2042,7 @@ class SheetsManager:
             # Full payment of aliquot
             aliquot_paid = aliquot["amount"]
             late_fee_paid = late_fee
-            
+
             accum_paid = (aliquot.get("paid_amount") or 0.0) + aliquot_paid
             aliquot["paid_amount"] = accum_paid
             aliquot["amount"] = accum_paid
@@ -1950,7 +2053,7 @@ class SheetsManager:
             else:
                 aliquot["reference"] = reference
             aliquot["late_fee"] = late_fee
-            
+
             extra_amount = amount - total_due
             if extra_amount > 0:
                 # 1. Pay pending historical debt first
@@ -1959,7 +2062,7 @@ class SheetsManager:
                     if c["unit"] == str(unit) and c["status"] == "Pendiente" and any(k in c["description"].lower() or k in c["type"].lower() for k in ["deuda", "saldo deudor"]):
                         pending_charge = c
                         break
-                        
+
                 if pending_charge:
                     self.freeze_historical_info(pending_charge, recipient_override)
                     if extra_amount >= pending_charge["amount"]:
@@ -1979,7 +2082,7 @@ class SheetsManager:
                         pending_charge["reference"] = ((pending_charge["reference"] + ", " + reference) if pending_charge["reference"] else reference)
                         saldo_deuda = pending_charge["amount"]
                         extra_amount = 0.0
-                        
+
                 # 2. Pay future aliquots next
                 if extra_amount > 0:
                     MONTHS_ORDER = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -1987,7 +2090,7 @@ class SheetsManager:
                         current_month_idx = MONTHS_ORDER.index(month.capitalize())
                     except ValueError:
                         current_month_idx = -1
-                        
+
                     if current_month_idx != -1:
                         idx = current_month_idx + 1
                         temp_year = year
@@ -1997,15 +2100,15 @@ class SheetsManager:
                                 idx = 0
                                 temp_year += 1
                             next_month = MONTHS_ORDER[idx]
-                            
+
                             aliquot_base = base_amt
-                            
+
                             future_aliquot = None
                             for a in self.data["aliquots"]:
                                 if a["unit"] == str(unit) and a["month"].lower() == next_month.lower() and int(a["year"]) == temp_year:
                                     future_aliquot = a
                                     break
-                                    
+
                             if future_aliquot:
                                 if future_aliquot["status"] == "Pagado":
                                     idx += 1
@@ -2014,7 +2117,7 @@ class SheetsManager:
                                 due_amt = future_aliquot["amount"]
                             else:
                                 due_amt = aliquot_base
-                                
+
                             if extra_amount >= due_amt:
                                 extra_amount -= due_amt
                                 if future_aliquot:
@@ -2074,20 +2177,20 @@ class SheetsManager:
                                     "status": "Abono"
                                 })
                                 extra_amount = 0.0
-                                
+
                             idx += 1
                             months_processed += 1
-                            
+
                 # 3. Leftover is general credit
                 if extra_amount > 0:
                     pago_extra = extra_amount
-                        
+
         # Mark bank statement transaction as reconciled
         for b in self.data["bank_statement"]:
             if b["reference"] == reference and not b["reconciled"]:
                 b["reconciled"] = True
                 break
-                
+
         self.sync()
         return {
             "aliquot": aliquot,
@@ -2105,17 +2208,17 @@ class SheetsManager:
             if c["id"] == charge_id:
                 charge = c
                 break
-                
+
         if not charge:
             return None
 
         self.freeze_historical_info(charge, recipient_override)
-            
+
         abono_deuda = 0.0
         pago_extra = 0.0
         saldo_deuda = 0.0
         is_fully_paid = True
-        
+
         if amount is not None:
             amount = float(amount)
             if amount < charge["amount"]:
@@ -2145,13 +2248,13 @@ class SheetsManager:
             charge["reference"] = reference
             saldo_deuda = 0.0
             is_fully_paid = True
-            
+
         # Mark bank statement transaction as reconciled
         for b in self.data["bank_statement"]:
             if b["reference"] == reference and not b["reconciled"]:
                 b["reconciled"] = True
                 break
-                
+
         self.sync()
         return {
             "charge": charge,
@@ -2172,7 +2275,7 @@ class SheetsManager:
                 a["late_fee"] = float(late_fee)
                 if status == "Pagado":
                     a["paid_amount"] = float(a["amount"])
-                
+
                 # If marking as paid and reference exists, reconcile bank statement
                 if status == "Pagado" and reference:
                     for b in self.data["bank_statement"]:
@@ -2188,11 +2291,11 @@ class SheetsManager:
             if a["id"] == aliquot_id:
                 if a.get("status") == "Pagado":
                     raise ValueError("No se puede editar el valor de una alícuota que ya ha sido pagada.")
-                
+
                 new_amount = float(amount)
                 if new_amount < 0:
                     raise ValueError("El monto de la alícuota no puede ser negativo.")
-                
+
                 a["amount"] = new_amount
                 # Update in SQLite
                 with Session(self.engine) as session:
@@ -2211,7 +2314,7 @@ class SheetsManager:
             if a["id"] == aliquot_id:
                 aliquot_found = a
                 break
-                
+
         if not aliquot_found:
             # Also check directly in DB
             with Session(self.engine) as session:
@@ -2227,10 +2330,10 @@ class SheetsManager:
         if aliquot_found.get("reference") and aliquot_found.get("status") == "Pagado":
             ref = str(aliquot_found["reference"]).strip().lower()
             other_using = any(
-                str(other.get("reference", "")).strip().lower() == ref 
+                str(other.get("reference", "")).strip().lower() == ref
                 for other in self.data["aliquots"] if other["id"] != aliquot_id and other.get("status") == "Pagado"
             ) or any(
-                str(c.get("reference", "")).strip().lower() == ref 
+                str(c.get("reference", "")).strip().lower() == ref
                 for c in self.data["additional_charges"] if c.get("status") == "Pagado"
             )
             if not other_using:
@@ -2248,28 +2351,28 @@ class SheetsManager:
             if db_a:
                 session.delete(db_a)
                 session.commit()
-                
+
         self.sync()
         return True
 
     def reconcile_mass(self):
         matched_aliquots = []
         matched_charges = []
-        
+
         # 1. Aliquots matching
         for a in self.data["aliquots"]:
             if a["status"] in ["Validación Manual", "Pendiente"] and a.get("reference"):
                 ref = str(a["reference"]).strip().lower()
                 amount = float(a["amount"])
-                
+
                 # Try to find a matching bank transaction
                 for b in self.data["bank_statement"]:
                     if b.get("reconciled"):
                         continue
-                    
+
                     b_ref = str(b["reference"]).strip().lower()
                     b_amount = float(b["amount"])
-                    
+
                     # Check reference matching (substring) and amount matching
                     late_fee = self.check_late_fee(b["date"], a["month"], a["year"])
                     if ref and b_ref and (ref in b_ref or b_ref in ref):
@@ -2284,20 +2387,20 @@ class SheetsManager:
                             b["reconciled"] = True
                             matched_aliquots.append(a.copy())
                             break
-                            
+
         # 2. Additional charges matching
         for c in self.data["additional_charges"]:
             if c["status"] in ["Validación Manual", "Pendiente"] and c.get("reference"):
                 ref = str(c["reference"]).strip().lower()
                 amount = float(c["amount"])
-                
+
                 for b in self.data["bank_statement"]:
                     if b.get("reconciled"):
                         continue
-                    
+
                     b_ref = str(b["reference"]).strip().lower()
                     b_amount = float(b["amount"])
-                    
+
                     if ref and b_ref and (ref in b_ref or b_ref in ref):
                         if abs(amount - b_amount) < 0.01:
                             c["status"] = "Pagado"
@@ -2318,24 +2421,24 @@ class SheetsManager:
                             b["reconciled"] = True
                             matched_charges.append(c.copy())
                             break
-                            
+
         if matched_aliquots or matched_charges:
             self.sync()
-            
+
             # Generate PDFs and send notifications for matched aliquots
             from receipt_processor import ReceiptProcessor
             from notifications import NotificationManager
             import os
-            
+
             static_dir = os.path.join(os.path.dirname(__file__), "static")
             receipts_dir = os.path.join(static_dir, "receipts")
-            
+
             for a in matched_aliquots:
                 receipt_no = f"REC-AL-{a['id']}"
                 resident_name = self.get_receipt_recipient_name(a["unit"])
                 dest_pdf = os.path.join(receipts_dir, f"recibo_{a['id']}.pdf")
                 concept = f"Pago de Alícuota Ordinaria - Mes: {a['month']} / {a['year']}"
-                
+
                 ReceiptProcessor.generate_receipt_pdf(
                     dest_path=dest_pdf,
                     receipt_no=receipt_no,
@@ -2348,7 +2451,7 @@ class SheetsManager:
                     payment_date=a["payment_date"],
                     sm=self
                 )
-                
+
                 try:
                     NotificationManager.send_receipt_notifications(
                         self,
@@ -2363,14 +2466,14 @@ class SheetsManager:
                     )
                 except Exception as e:
                     print(f"Error sending automatic aliquot notification: {e}")
-                
+
             # Generate PDFs and send notifications for matched charges
             for c in matched_charges:
                 receipt_no = f"REC-AC-{c['id']}"
                 resident_name = self.get_receipt_recipient_name(c["unit"])
                 dest_pdf = os.path.join(receipts_dir, f"recibo_charge_{c['id']}.pdf")
                 concept = f"{c['type']}: {c['description']}"
-                
+
                 ReceiptProcessor.generate_receipt_pdf(
                     dest_path=dest_pdf,
                     receipt_no=receipt_no,
@@ -2383,7 +2486,7 @@ class SheetsManager:
                     payment_date=c["payment_date"],
                     sm=self
                 )
-                
+
                 try:
                     NotificationManager.send_receipt_notifications(
                         self,
@@ -2398,10 +2501,10 @@ class SheetsManager:
                     )
                 except Exception as e:
                     print(f"Error sending automatic charge notification: {e}")
-                
+
         return len(matched_aliquots), len(matched_charges)
 
-    def add_or_update_unit(self, unit_id, owner, phone1, email1, tenant, phone2, email2, aliquot_base=None, cedula_owner="", cedula_tenant="", receipt_recipient_type="general"):
+    def add_or_update_unit(self, unit_id, owner, phone1="", email1="", tenant="", phone2="", email2="", aliquot_base=None, cedula_owner="", cedula_tenant="", receipt_recipient_type="general"):
         if aliquot_base is None:
             aliquot_base = float(self.config.get("default_aliquot_base", 70.0))
         else:
@@ -2411,7 +2514,7 @@ class SheetsManager:
             if u["id"] == str(unit_id):
                 unit = u
                 break
-                
+
         if unit:
             unit["owner"] = owner
             unit["cedula_owner"] = cedula_owner
@@ -2438,14 +2541,14 @@ class SheetsManager:
                 "receipt_recipient_type": receipt_recipient_type
             }
             self.data["units"].append(unit)
-                    
+
         self.sync()
         return unit
 
     def delete_unit(self, unit_id):
         unit_id_str = str(unit_id).strip()
         in_memory = any(u["id"] == unit_id_str for u in self.data["units"])
-        
+
         db_unit = None
         with Session(self.engine) as session:
             db_unit = session.exec(select(Unit).where(Unit.id == unit_id_str)).first()
@@ -2456,31 +2559,31 @@ class SheetsManager:
                     db_user = session.exec(select(User).where(User.cedula == c)).first()
                     if db_user:
                         session.delete(db_user)
-                
+
                 # Delete aliquots
                 db_aliquots = session.exec(select(Aliquot).where(Aliquot.unit == unit_id_str)).all()
                 for a in db_aliquots:
                     session.delete(a)
-                    
+
                 # Delete charges
                 db_charges = session.exec(select(AdditionalCharge).where(AdditionalCharge.unit == unit_id_str)).all()
                 for c in db_charges:
                     session.delete(c)
-                    
+
                 # Delete unit
                 session.delete(db_unit)
                 session.commit()
-        
+
         if in_memory or db_unit:
             # Clean up memory structures
             self.data["units"] = [u for u in self.data["units"] if u["id"] != unit_id_str]
             self.data["aliquots"] = [a for a in self.data["aliquots"] if a["unit"] != unit_id_str]
             self.data["additional_charges"] = [c for c in self.data["additional_charges"] if c["unit"] != unit_id_str]
-            
+
             # Sync deletes to local DB and Google Sheets
             self.sync()
             return True
-            
+
         return False
 
     def update_settings(self, spreadsheet_id=None, google_credentials_json=None, use_google_sheets=None, late_fee_day=None, late_fee_amount=None, initial_bank_balance=None, default_aliquot_base=None, smtp_host=None, smtp_port=None, smtp_user=None, smtp_password=None, smtp_from=None, twilio_sid=None, twilio_token=None, twilio_whatsapp_from=None, whatsapp_provider=None, meta_wa_token=None, meta_wa_phone_number_id=None, meta_wa_verify_token=None, meta_wa_business_account_id=None, directive_president=None, directive_treasurer=None, condo_name=None, condo_address=None, condo_ruc=None, exonerate_directiva=None, receipt_recipient_type=None, app_mode=None, db_type=None, db_host=None, db_port=None, db_user=None, db_password=None, db_name=None, db_custom_url=None):
@@ -2556,7 +2659,7 @@ class SheetsManager:
             self.config["db_name"] = str(db_name)
         if db_custom_url is not None and db_custom_url != "******":
             self.config["db_custom_url"] = db_custom_url
-            
+
         self.save_config()
         self.sync()
         self.load_data() # Reload data using new configs
@@ -2603,32 +2706,32 @@ class SheetsManager:
     def emit_aliquots_bulk(self, month, year):
         month = str(month).strip().capitalize()
         year = int(year)
-        
+
         default_aliquot_base = float(self.config.get("default_aliquot_base", 70.0))
         exonerate_directiva = self.config.get("exonerate_directiva", False)
-        
+
         # Build set of unit IDs that are active board members
         board_units = set()
         if exonerate_directiva:
             board_units = {str(bm["unit_id"]) for bm in self.data.get("board_members", []) if bm.get("unit_id")}
-            
+
         emitted_count = 0
-        
+
         for u in self.data["units"]:
             unit_id = u["id"]
             aliquot_id = f"{unit_id}-{year}-{month}"
-            
+
             exists = False
             for a in self.data["aliquots"]:
                 if str(a.get("unit")) == str(unit_id) and str(a.get("month", "")).lower() == month.lower() and int(a.get("year", 0)) == year:
                     exists = True
                     break
-                    
+
             if not exists:
                 is_exonerated = str(unit_id) in board_units
                 aliquot_base = 0.0 if is_exonerated else float(u.get("aliquot_base") or default_aliquot_base)
                 status = "Exonerado" if is_exonerated else "Pendiente"
-                
+
                 al_dict = {
                     "id": aliquot_id,
                     "unit": str(unit_id),
@@ -2644,51 +2747,51 @@ class SheetsManager:
                 self.freeze_historical_info(al_dict)
                 self.data["aliquots"].append(al_dict)
                 emitted_count += 1
-                
+
         if emitted_count > 0:
             self.sync()
-            
+
         return emitted_count
 
     def emit_aliquot_individual(self, unit, month, year, amount=None):
         month = str(month).strip().capitalize()
         year = int(year)
         unit_str = str(unit).strip()
-        
+
         # Verify unit exists
         unit_obj = None
         for u in self.data["units"]:
             if str(u["id"]) == unit_str:
                 unit_obj = u
                 break
-                
+
         if not unit_obj:
             raise ValueError(f"El departamento/unidad '{unit_str}' no existe en el sistema.")
-            
+
         aliquot_id = f"{unit_str}-{year}-{month}"
-        
+
         # Check if aliquot already exists
         for a in self.data["aliquots"]:
             if str(a["unit"]) == unit_str and str(a["month"]).lower() == month.lower() and int(a["year"]) == year:
                 raise ValueError(f"La alícuota para el Depto {unit_str} correspondiente a {month} {year} ya existe (Estado: {a.get('status')}).")
-                
+
         default_aliquot_base = float(self.config.get("default_aliquot_base", 70.0))
         exonerate_directiva = self.config.get("exonerate_directiva", False)
-        
+
         # Check if board member
         is_board_member = False
         if exonerate_directiva:
             is_board_member = any(str(bm.get("unit_id")) == unit_str for bm in self.data.get("board_members", []))
-            
+
         if amount is not None and float(amount) >= 0:
             aliquot_base = float(amount)
             is_exonerated = False
         else:
             is_exonerated = is_board_member
             aliquot_base = 0.0 if is_exonerated else float(unit_obj.get("aliquot_base") or default_aliquot_base)
-            
+
         status = "Exonerado" if is_exonerated else "Pendiente"
-        
+
         al_dict = {
             "id": aliquot_id,
             "unit": unit_str,
@@ -2717,17 +2820,17 @@ class SheetsManager:
                     break
             if not aliquot:
                 return False
-                
+
             ref = aliquot.get("reference", "")
             unit_id = aliquot.get("unit", "")
-            
+
             # Find unit to restore default aliquot amount
             base_amt = float(self.config.get("default_aliquot_base", 70.0))
             for u in self.data["units"]:
                 if u["id"] == unit_id:
                     base_amt = float(u.get("aliquot_base", base_amt))
                     break
-            
+
             # Restore aliquot properties
             aliquot["amount"] = base_amt
             aliquot["paid_amount"] = 0.0
@@ -2735,14 +2838,14 @@ class SheetsManager:
             aliquot["payment_date"] = ""
             aliquot["reference"] = ""
             aliquot["late_fee"] = 0.0
-            
+
             # Unreconcile bank statement transaction
             if ref:
                 for b in self.data["bank_statement"]:
                     if b["reference"] == ref:
                         b["reconciled"] = False
                         break
-                        
+
                 # Also restore any other future aliquots for this unit that were paid/partially paid with the SAME reference
                 for a in self.data["aliquots"]:
                     if a["unit"] == unit_id and a["reference"] == ref and a["id"] != item_id:
@@ -2757,7 +2860,7 @@ class SheetsManager:
                         a["payment_date"] = ""
                         a["reference"] = ""
                         a["late_fee"] = 0.0
-                        
+
                 # Look for any additional charge that was paid or partially paid using this reference
                 for c in self.data["additional_charges"]:
                     if c["unit"] == unit_id and ref in c.get("reference", ""):
@@ -2779,7 +2882,7 @@ class SheetsManager:
                             c["status"] = "Pendiente"
                             c["reference"] = c["reference"].replace(ref, "").strip(", ")
                             c["payment_date"] = ""
-                            
+
             # Delete physical receipt image if any
             comprobante_url = aliquot.get("comprobante_url", "")
             if comprobante_url:
@@ -2790,7 +2893,7 @@ class SheetsManager:
                     except Exception as e:
                         print(f"Error removing comprobante image: {e}")
             aliquot["comprobante_url"] = ""
-            
+
             # Delete PDF receipt
             receipt_path = os.path.join(os.path.dirname(__file__), "static", "receipts", f"recibo_{item_id}.pdf")
             if os.path.exists(receipt_path):
@@ -2798,10 +2901,10 @@ class SheetsManager:
                     os.remove(receipt_path)
                 except Exception as e:
                     print(f"Error removing PDF: {e}")
-                    
+
             self.sync()
             return True
-            
+
         elif item_type == "charge":
             # Find charge
             charge = None
@@ -2811,9 +2914,9 @@ class SheetsManager:
                     break
             if not charge:
                 return False
-                
+
             ref = charge.get("reference", "")
-            
+
             # Restores charge properties
             tx_amt = 0.0
             if ref:
@@ -2828,7 +2931,7 @@ class SheetsManager:
             charge["status"] = "Pendiente"
             charge["payment_date"] = ""
             charge["reference"] = ""
-            
+
             # Delete physical receipt image if any
             comprobante_url = charge.get("comprobante_url", "")
             if comprobante_url:
@@ -2839,7 +2942,7 @@ class SheetsManager:
                     except Exception as e:
                         print(f"Error removing comprobante image: {e}")
             charge["comprobante_url"] = ""
-            
+
             # Delete PDF receipt
             receipt_path = os.path.join(os.path.dirname(__file__), "static", "receipts", f"recibo_charge_{item_id}.pdf")
             if os.path.exists(receipt_path):
@@ -2847,10 +2950,10 @@ class SheetsManager:
                     os.remove(receipt_path)
                 except Exception as e:
                     print(f"Error removing PDF: {e}")
-                    
+
             self.sync()
             return True
-            
+
         return False
 
     def add_board_member(self, unit_id, name, role):
@@ -2859,7 +2962,7 @@ class SheetsManager:
             ids = [m.get("id") for m in self.data["board_members"] if m.get("id")]
             if ids:
                 next_id = max(ids) + 1
-        
+
         member = {
             "id": next_id,
             "unit_id": str(unit_id),
@@ -2878,14 +2981,14 @@ class SheetsManager:
                 break
         if not member:
             return False
-            
+
         # Delete from SQLite
         with Session(self.engine) as session:
             db_item = session.get(BoardMember, member_id)
             if db_item:
                 session.delete(db_item)
                 session.commit()
-                
+
         self.data["board_members"].remove(member)
         self.sync()
         return True
