@@ -111,3 +111,68 @@ def test_webhook_signatures():
     params = {"Body": "Hola", "From": "whatsapp:+593987654321"}
     sig = verify_twilio_signature(twilio_token, "fake_sig", url, params)
     assert sig is False
+
+
+def test_simplified_login_role_autodetection(client, test_sm):
+    from sqlmodel import Session, select
+    from models import User
+
+    # Setup test users
+    with Session(test_sm.engine) as session:
+        sa = session.exec(select(User).where(User.email == "superadmin@condo.com")).first()
+        if not sa:
+            sa = User(
+                cedula="9999999999",
+                email="superadmin@condo.com",
+                name="Super Administrador",
+                role="superadmin",
+                password_hash=get_password_hash("TestAdminPass123!"),
+                is_active=True
+            )
+            session.add(sa)
+        else:
+            sa.password_hash = get_password_hash("TestAdminPass123!")
+            session.add(sa)
+
+        owner_user = session.exec(select(User).where(User.cedula == "1713916854")).first()
+        if not owner_user:
+            owner_user = User(
+                cedula="1713916854",
+                email="carlos.mendoza@email.com",
+                name="Carlos Mendoza",
+                role="owner",
+                password_hash=get_password_hash("OwnerPass123!"),
+                is_active=True
+            )
+            session.add(owner_user)
+        else:
+            owner_user.password_hash = get_password_hash("OwnerPass123!")
+            session.add(owner_user)
+        session.commit()
+
+    # 1. Login as superadmin using email WITHOUT role
+    res = client.post("/api/auth/login", json={
+        "identifier": "superadmin@condo.com",
+        "password": "TestAdminPass123!"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["user"]["role"] == "superadmin"
+    assert "access_token" in data
+
+    # 2. Login as resident owner using cédula WITHOUT role
+    res = client.post("/api/auth/login", json={
+        "identifier": "1713916854",
+        "password": "OwnerPass123!"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["user"]["role"] == "owner"
+    assert "access_token" in data
+
+    # 3. Invalid credentials returns 400
+    res = client.post("/api/auth/login", json={
+        "identifier": "1713916854",
+        "password": "WrongPassword"
+    })
+    assert res.status_code == 400

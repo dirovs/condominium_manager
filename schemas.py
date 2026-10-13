@@ -150,19 +150,23 @@ class UnitCreate(BaseModel):
     receipt_recipient_type: Optional[str] = "general"
 
 class LoginRequest(BaseModel):
-    cedula: str
-    email: str
-    role: str
+    cedula: Optional[str] = ""
+    email: Optional[str] = ""
+    role: Optional[str] = ""
+    username: Optional[str] = ""
+    identifier: Optional[str] = ""
     password: Optional[str] = ""
 
 class RequestTempPasswordRequest(BaseModel):
-    cedula: str
-    email: str
-    role: str
+    cedula: Optional[str] = ""
+    email: Optional[str] = ""
+    role: Optional[str] = ""
+    identifier: Optional[str] = ""
 
 class ResetPasswordRequest(BaseModel):
-    cedula: str
-    role: str
+    cedula: Optional[str] = ""
+    role: Optional[str] = ""
+    identifier: Optional[str] = ""
     temp_password: str
     new_password: str
 

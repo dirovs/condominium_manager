@@ -10,7 +10,7 @@ import subprocess
 from datetime import datetime
 
 
-def backup_database():
+def backup_database(db_path: str = None):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     backup_dir = os.path.join(base_dir, "backups")
     os.makedirs(backup_dir, exist_ok=True)
@@ -19,9 +19,10 @@ def backup_database():
     db_type = os.environ.get("DB_TYPE", "sqlite").lower()
 
     if db_type == "sqlite":
-        db_path = os.path.join(base_dir, "condominium.db")
-        if not os.path.exists(db_path):
-            db_path = os.path.join(base_dir, "condomanager.db")
+        if not db_path or not os.path.exists(db_path):
+            db_path = os.path.join(base_dir, "condominium.db")
+            if not os.path.exists(db_path):
+                db_path = os.path.join(base_dir, "condomanager.db")
 
         if os.path.exists(db_path):
             dest_backup = os.path.join(backup_dir, f"backup_sqlite_{timestamp}.db")

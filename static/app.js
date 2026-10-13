@@ -3325,32 +3325,13 @@ function setLoginMode(mode) {
 
 function onLoginRoleChange() {
     clearLoginAlert();
-    const role = document.getElementById('login-role').value;
-    const cedulaInput = document.getElementById('login-cedula');
-    const emailInput = document.getElementById('login-email');
+    const identInput = document.getElementById('login-identifier');
     const passwordInput = document.getElementById('login-password');
-
-    if (role === 'superadmin' || role === 'admin') {
-        cedulaInput.value = '9999999999';
-        emailInput.value = 'superadmin@condo.com';
-        passwordInput.value = '';
-    } else {
-        cedulaInput.value = '';
-        emailInput.value = '';
-        passwordInput.value = '';
-    }
+    if (passwordInput) passwordInput.value = '';
 }
 
 function onRecoverRoleChange() {
     clearLoginAlert();
-    const role = document.getElementById('recover-role') ? document.getElementById('recover-role').value : 'superadmin';
-    const cedulaInput = document.getElementById('recover-cedula');
-    const emailInput = document.getElementById('recover-email');
-
-    if (role === 'superadmin' || role === 'admin') {
-        if (cedulaInput) cedulaInput.value = '9999999999';
-        if (emailInput) emailInput.value = 'superadmin@condo.com';
-    }
 }
 
 window.setLoginMode = setLoginMode;
@@ -3360,13 +3341,12 @@ window.onRecoverRoleChange = onRecoverRoleChange;
 async function handleLoginSubmit(e) {
     e.preventDefault();
     clearLoginAlert();
-    const role = document.getElementById('login-role').value;
-    const cedula = (document.getElementById('login-cedula').value || '').trim();
-    const email = (document.getElementById('login-email').value || '').trim();
+    const identEl = document.getElementById('login-identifier');
+    const identifier = identEl ? identEl.value.trim() : (document.getElementById('login-email') ? document.getElementById('login-email').value.trim() : '');
     const password = (document.getElementById('login-password').value || '').trim();
 
-    if (!cedula || !email || !password) {
-        showLoginAlert("Por favor completa todos los campos requeridos.", "error");
+    if (!identifier || !password) {
+        showLoginAlert("Por favor ingresa tu cédula o correo y tu contraseña.", "error");
         return;
     }
 
@@ -3374,7 +3354,7 @@ async function handleLoginSubmit(e) {
         const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cedula, email, role, password })
+            body: JSON.stringify({ identifier, password })
         });
 
         const data = await res.json();
@@ -3394,9 +3374,9 @@ async function handleLoginSubmit(e) {
             
             if (data.needs_password_change) {
                 showToast("Has ingresado con clave temporal. Establece tu contraseña permanente.", "warning");
-                document.getElementById('reset-cedula').value = currentUser.cedula;
-                document.getElementById('reset-role').value = currentUser.role;
-                document.getElementById('reset-temp-pin').value = password;
+                if (document.getElementById('reset-cedula')) document.getElementById('reset-cedula').value = currentUser.cedula || identifier;
+                if (document.getElementById('reset-role')) document.getElementById('reset-role').value = currentUser.role || '';
+                if (document.getElementById('reset-temp-pin')) document.getElementById('reset-temp-pin').value = password;
                 toggleLoginScreen(true);
                 setLoginMode('reset');
                 showLoginAlert("Has ingresado con un PIN temporal. Por favor define tu nueva contraseña permanente a continuación.", "warning");
@@ -3416,12 +3396,11 @@ async function handleLoginSubmit(e) {
 async function handleRecoverSubmit(e) {
     e.preventDefault();
     clearLoginAlert();
-    const role = document.getElementById('recover-role').value;
-    const cedula = (document.getElementById('recover-cedula').value || '').trim();
-    const email = (document.getElementById('recover-email').value || '').trim();
+    const identEl = document.getElementById('recover-identifier');
+    const identifier = identEl ? identEl.value.trim() : (document.getElementById('recover-email') ? document.getElementById('recover-email').value.trim() : '');
 
-    if (!cedula || !email) {
-        showLoginAlert("Por favor ingresa tu cédula y correo electrónico.", "error");
+    if (!identifier) {
+        showLoginAlert("Por favor ingresa tu cédula o correo electrónico.", "error");
         return;
     }
 
@@ -3429,7 +3408,7 @@ async function handleRecoverSubmit(e) {
         const res = await fetch('/api/auth/request-temp-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cedula, email, role })
+            body: JSON.stringify({ identifier })
         });
 
         const data = await res.json();
@@ -3439,25 +3418,33 @@ async function handleRecoverSubmit(e) {
                 const alertHtml = `<strong>PIN Temporal Generado: <span style="font-size: 1.15rem; color: #60a5fa; letter-spacing: 2px; font-family: monospace;">${pin}</span></strong><br><span style="font-size: 0.85rem; color: #cbd5e1;">(Válido por 15 min). El correo no está configurado en el servidor. Usa este PIN directamente en el campo de contraseña para ingresar.</span>`;
                 
                 // Pre-fill fields on login form and reset form
-                document.getElementById('login-role').value = role;
-                document.getElementById('login-cedula').value = cedula;
-                document.getElementById('login-email').value = email;
-                document.getElementById('login-password').value = pin;
+                if (document.getElementById('login-identifier')) document.getElementById('login-identifier').value = identifier;
+                if (document.getElementById('login-password')) document.getElementById('login-password').value = pin;
                 
-                document.getElementById('reset-cedula').value = cedula;
-                document.getElementById('reset-role').value = role;
-                document.getElementById('reset-temp-pin').value = pin;
+                if (document.getElementById('reset-cedula')) document.getElementById('reset-cedula').value = identifier;
+                if (document.getElementById('reset-temp-pin')) document.getElementById('reset-temp-pin').value = pin;
                 
                 setLoginMode('login');
                 showLoginAlert(alertHtml, "warning", true);
                 showToast(`PIN Temporal: ${pin}`, "warning");
             } else {
                 const msg = data.message || "Clave temporal enviada a tu correo registrado. Revisa tu bandeja de entrada o spam.";
-                document.getElementById('login-role').value = role;
-                document.getElementById('login-cedula').value = cedula;
-                document.getElementById('login-email').value = email;
+                if (document.getElementById('login-identifier')) document.getElementById('login-identifier').value = identifier;
                 setLoginMode('login');
                 showLoginAlert(msg, "success");
+                showToast("Correo enviado con PIN temporal");
+            }
+        } else {
+            const errorMsg = data.detail || "Error al solicitar clave temporal.";
+            showLoginAlert(errorMsg, "error");
+            showToast(errorMsg, "error");
+        }
+    } catch (err) {
+        const errorMsg = "Error de comunicación: " + (err.message || err);
+        showLoginAlert(errorMsg, "error");
+        showToast(errorMsg, "error");
+    }
+}
                 showToast("Clave temporal enviada a tu correo.");
             }
         } else {
@@ -3504,9 +3491,8 @@ async function handleResetSubmit(e) {
             showLoginAlert(msg, "success");
             
             // Populate credentials to make it easy
-            document.getElementById('login-role').value = role;
-            document.getElementById('login-cedula').value = cedula;
-            document.getElementById('login-password').value = new_password;
+            if (document.getElementById('login-identifier')) document.getElementById('login-identifier').value = cedula;
+            if (document.getElementById('login-password')) document.getElementById('login-password').value = new_password;
         } else {
             const errorMsg = data.detail || "Error al restablecer contraseña.";
             showLoginAlert(errorMsg, "error");

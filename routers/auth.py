@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlmodel import Session, select
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from schemas import (
     LoginRequest,
@@ -32,67 +32,71 @@ def get_sm():
 def request_temp_password(req: RequestTempPasswordRequest, request: Request):
     sm = get_sm()
     client_ip = request.client.host if request.client else "127.0.0.1"
+    raw_ident = (req.identifier or "").strip()
     req_cedula = str(req.cedula or "").strip()
     req_email = str(req.email or "").strip().lower()
     req_role = str(req.role or "").strip()
 
-    rate_key = f"pin:{client_ip}:{req_cedula or req_email}"
+    if raw_ident:
+        if "@" in raw_ident:
+            if not req_email:
+                req_email = raw_ident.lower()
+        else:
+            if not req_cedula:
+                req_cedula = raw_ident
+
+    effective_key = req_cedula or req_email or raw_ident
+    rate_key = f"pin:{client_ip}:{effective_key}"
     login_limiter.check(rate_key, max_attempts=5, window_seconds=300)
 
-    if not req_cedula and not req_email:
+    if not effective_key:
         raise HTTPException(status_code=400, detail="Debe ingresar su cédula o correo electrónico.")
 
     with Session(sm.engine) as session:
-        allowed_roles = [req_role]
-        if req_role in ["admin", "superadmin", ""]:
-            allowed_roles = ["admin", "superadmin"]
+        # Auto-sync from units if user is owner/tenant
+        for u in sm.data.get("units", []):
+            u_ced_o = str(u.get("cedula_owner") or "").strip()
+            u_em_o = str(u.get("email1") or "").strip().lower()
+            u_ced_t = str(u.get("cedula_tenant") or "").strip()
+            u_em_t = str(u.get("email2") or "").strip().lower()
+
+            matched = False
+            if req_cedula and (req_cedula == u_ced_o or req_cedula == u_ced_t):
+                matched = True
+            elif req_email and (req_email == u_em_o or req_email == u_em_t):
+                matched = True
+            elif raw_ident and (raw_ident == u_ced_o or raw_ident.lower() == u_em_o or raw_ident == u_ced_t or raw_ident.lower() == u_em_t):
+                matched = True
+
+            if matched:
+                sm.sync_user_from_unit(session, u)
+                session.commit()
 
         conditions = []
         if req_cedula:
             conditions.append(func.trim(User.cedula) == req_cedula)
         if req_email:
             conditions.append(func.lower(User.email) == req_email)
+        if raw_ident:
+            conditions.append(func.trim(User.cedula) == raw_ident)
+            conditions.append(func.lower(User.email) == raw_ident.lower())
 
-        query = select(User).where(User.role.in_(allowed_roles))
-        if len(conditions) == 2:
-            user = session.exec(query.where(conditions[0], conditions[1])).first()
-            if not user:
-                user = session.exec(query.where(conditions[0] | conditions[1])).first()
-        elif len(conditions) == 1:
-            user = session.exec(query.where(conditions[0])).first()
-        else:
-            user = None
+        query = select(User)
+        if req_role:
+            if req_role in ["admin", "superadmin"]:
+                query = query.where(User.role.in_(["superadmin", "admin"]))
+            else:
+                query = query.where(User.role == req_role)
 
-        # Auto-sync from units if user is owner/tenant and not yet in User table
-        if not user and req_role in ["owner", "tenant"]:
-            for u in sm.data["units"]:
-                if req_role == "owner":
-                    u_ced = str(u.get("cedula_owner") or "").strip()
-                    u_email = str(u.get("email1") or "").strip().lower()
-                    if (req_cedula and u_ced == req_cedula) or (req_email and u_email == req_email):
-                        sm.sync_user_from_unit(session, u)
-                        session.commit()
-                        user = session.exec(select(User).where(
-                            User.role == req_role,
-                            (func.trim(User.cedula) == u_ced) | (func.lower(User.email) == u_email)
-                        )).first()
-                        break
-                elif req_role == "tenant":
-                    u_ced = str(u.get("cedula_tenant") or "").strip()
-                    u_email = str(u.get("email2") or "").strip().lower()
-                    if (req_cedula and u_ced == req_cedula) or (req_email and u_email == req_email):
-                        sm.sync_user_from_unit(session, u)
-                        session.commit()
-                        user = session.exec(select(User).where(
-                            User.role == req_role,
-                            (func.trim(User.cedula) == u_ced) | (func.lower(User.email) == u_email)
-                        )).first()
-                        break
+        if conditions:
+            query = query.where(or_(*conditions))
+
+        user = session.exec(query).first()
 
         if not user:
             raise HTTPException(
                 status_code=400,
-                detail=f"No se encontró ningún usuario con los datos ingresados para el rol seleccionado ({req_role}). Verifique que sus datos coincidan con los registrados en la administración."
+                detail="No se encontró ningún usuario con los datos ingresados. Verifique que sus datos coincidan con los registrados en la administración."
             )
 
         # Generate 6-digit temporal PIN
@@ -191,10 +195,14 @@ Si no solicitaste este cambio, por favor ignora este correo.
 @router.post("/api/auth/reset-password")
 def reset_password(req: ResetPasswordRequest):
     sm = get_sm()
+    raw_ident = (req.identifier or "").strip()
     req_cedula = str(req.cedula or "").strip()
     req_role = str(req.role or "").strip()
     req_temp_pin = str(req.temp_password or "").strip()
     req_new_pwd = str(req.new_password or "").strip()
+
+    if raw_ident and not req_cedula:
+        req_cedula = raw_ident
 
     if not req_temp_pin:
         raise HTTPException(status_code=400, detail="Debe ingresar el PIN temporal recibido.")
@@ -202,14 +210,22 @@ def reset_password(req: ResetPasswordRequest):
         raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 4 caracteres.")
 
     with Session(sm.engine) as session:
-        allowed_roles = [req_role]
-        if req_role in ["admin", "superadmin", ""]:
-            allowed_roles = ["admin", "superadmin"]
+        conditions = []
+        if req_cedula:
+            conditions.append(func.trim(User.cedula) == req_cedula)
+            conditions.append(func.lower(User.email) == req_cedula.lower())
 
-        user = session.exec(select(User).where(
-            func.trim(User.cedula) == req_cedula,
-            User.role.in_(allowed_roles)
-        )).first()
+        query = select(User)
+        if req_role:
+            if req_role in ["admin", "superadmin"]:
+                query = query.where(User.role.in_(["admin", "superadmin"]))
+            else:
+                query = query.where(User.role == req_role)
+
+        if conditions:
+            query = query.where(or_(*conditions))
+
+        user = session.exec(query).first()
 
         if not user or not user.temp_password:
             raise HTTPException(status_code=400, detail="No se ha solicitado una clave temporal para esta cuenta o ya fue utilizada.")
@@ -236,128 +252,150 @@ def reset_password(req: ResetPasswordRequest):
 def login(req: LoginRequest, request: Request):
     sm = get_sm()
     client_ip = request.client.host if request.client else "127.0.0.1"
+
+    # Support multiple formats of identifier
+    raw_ident = (req.identifier or req.username or "").strip()
     req_cedula = str(req.cedula or "").strip()
     req_email = str(req.email or "").strip().lower()
-    req_role = str(req.role or "").strip()
+    req_role = str(req.role or "").strip().lower()
     req_password = str(req.password or "").strip()
 
-    rate_key = f"login:{client_ip}:{req_cedula or req_email}"
+    if raw_ident:
+        if "@" in raw_ident:
+            if not req_email:
+                req_email = raw_ident.lower()
+        else:
+            if not req_cedula:
+                req_cedula = raw_ident
+
+    effective_key = req_cedula or req_email or raw_ident
+    rate_key = f"login:{client_ip}:{effective_key}"
     login_limiter.check(rate_key, max_attempts=5, window_seconds=300)
 
     if not req_password:
         raise HTTPException(status_code=400, detail="Debe ingresar su contraseña o PIN temporal.")
-    if not req_cedula and not req_email:
-        raise HTTPException(status_code=400, detail="Debe ingresar su cédula o correo electrónico.")
+    if not effective_key:
+        raise HTTPException(status_code=400, detail="Debe ingresar su cédula, correo electrónico o usuario.")
 
     with Session(sm.engine) as session:
-        allowed_roles = [req_role]
-        if req_role in ["admin", "superadmin", ""]:
-            allowed_roles = ["admin", "superadmin"]
+        # 1. Sync from units if resident exists and not yet in User table
+        for u in sm.data.get("units", []):
+            u_ced_o = str(u.get("cedula_owner") or "").strip()
+            u_em_o = str(u.get("email1") or "").strip().lower()
+            u_ced_t = str(u.get("cedula_tenant") or "").strip()
+            u_em_t = str(u.get("email2") or "").strip().lower()
 
+            matched = False
+            if req_cedula and (req_cedula == u_ced_o or req_cedula == u_ced_t):
+                matched = True
+            elif req_email and (req_email == u_em_o or req_email == u_em_t):
+                matched = True
+            elif raw_ident and (raw_ident == u_ced_o or raw_ident.lower() == u_em_o or raw_ident == u_ced_t or raw_ident.lower() == u_em_t):
+                matched = True
+
+            if matched:
+                sm.sync_user_from_unit(session, u)
+                session.commit()
+
+        # 2. Build user search conditions
         conditions = []
         if req_cedula:
             conditions.append(func.trim(User.cedula) == req_cedula)
         if req_email:
             conditions.append(func.lower(User.email) == req_email)
+        if raw_ident:
+            conditions.append(func.trim(User.cedula) == raw_ident)
+            conditions.append(func.lower(User.email) == raw_ident.lower())
 
-        query = select(User).where(User.role.in_(allowed_roles))
-        if len(conditions) == 2:
-            user = session.exec(query.where(conditions[0], conditions[1])).first()
-            if not user:
-                user = session.exec(query.where(conditions[0] | conditions[1])).first()
-        elif len(conditions) == 1:
-            user = session.exec(query.where(conditions[0])).first()
-        else:
-            user = None
+        query = select(User)
+        if req_role:
+            if req_role in ["admin", "superadmin"]:
+                query = query.where(User.role.in_(["superadmin", "admin"]))
+            else:
+                query = query.where(User.role == req_role)
 
-        # If not found in User table, check if exists in units and auto-sync
-        if not user and req_role in ["owner", "tenant"]:
-            for u in sm.data["units"]:
-                if req_role == "owner":
-                    u_ced = str(u.get("cedula_owner") or "").strip()
-                    u_email = str(u.get("email1") or "").strip().lower()
-                    if (req_cedula and u_ced == req_cedula) or (req_email and u_email == req_email):
-                        sm.sync_user_from_unit(session, u)
-                        session.commit()
-                        user = session.exec(select(User).where(
-                            User.role == req_role,
-                            (func.trim(User.cedula) == u_ced) | (func.lower(User.email) == u_email)
-                        )).first()
-                        break
-                elif req_role == "tenant":
-                    u_ced = str(u.get("cedula_tenant") or "").strip()
-                    u_email = str(u.get("email2") or "").strip().lower()
-                    if (req_cedula and u_ced == req_cedula) or (req_email and u_email == req_email):
-                        sm.sync_user_from_unit(session, u)
-                        session.commit()
-                        user = session.exec(select(User).where(
-                            User.role == req_role,
-                            (func.trim(User.cedula) == u_ced) | (func.lower(User.email) == u_email)
-                        )).first()
-                        break
+        if conditions:
+            query = query.where(or_(*conditions))
 
-        if not user:
+        candidates = session.exec(query).all()
+
+        if not candidates:
             raise HTTPException(
                 status_code=400,
-                detail=f"No se encontró ningún usuario con los datos ingresados para el rol seleccionado ({req_role}). Verifique sus datos o solicite una clave en 'Recuperar Clave'."
+                detail="No se encontró ningún usuario con los datos ingresados. Verifique sus datos o solicite una clave en 'Recuperar Clave'."
             )
 
-        # Check password and temporary PIN
+        # 3. Match password across candidates
+        user = None
         is_temp_valid = False
-        if user.temp_password and str(user.temp_password).strip() == req_password:
-            if user.temp_password_expiry:
-                try:
-                    expiry = datetime.fromisoformat(user.temp_password_expiry)
-                    if datetime.now() <= expiry:
-                        is_temp_valid = True
-                    else:
-                        raise HTTPException(status_code=400, detail="El PIN temporal ha expirado. Por favor solicite uno nuevo en la pestaña 'Recuperar Clave'.")
-                except ValueError:
-                    is_temp_valid = True
-            else:
-                is_temp_valid = True
+        is_perm_valid = False
 
-        is_perm_valid, needs_rehash = verify_password(req_password, user.password_hash or "")
+        for cand in candidates:
+            # Check temp PIN
+            cand_temp_valid = False
+            if cand.temp_password and str(cand.temp_password).strip() == req_password:
+                if cand.temp_password_expiry:
+                    try:
+                        expiry = datetime.fromisoformat(cand.temp_password_expiry)
+                        if datetime.now() <= expiry:
+                            cand_temp_valid = True
+                        else:
+                            raise HTTPException(status_code=400, detail="El PIN temporal ha expirado. Por favor solicite uno nuevo en la pestaña 'Recuperar Clave'.")
+                    except ValueError:
+                        cand_temp_valid = True
+                else:
+                    cand_temp_valid = True
 
-        # Transparent upgrade of legacy hash to Bcrypt
-        if is_perm_valid and needs_rehash:
-            user.password_hash = get_password_hash(req_password)
-            session.add(user)
-            session.commit()
+            # Check permanent password
+            cand_perm_valid, cand_needs_rehash = verify_password(req_password, cand.password_hash or "")
+            if cand_perm_valid and cand_needs_rehash:
+                cand.password_hash = get_password_hash(req_password)
+                session.add(cand)
+                session.commit()
 
-        if not is_temp_valid and not is_perm_valid:
-            if not user.password_hash and not user.temp_password:
+            if cand_temp_valid or cand_perm_valid:
+                user = cand
+                is_temp_valid = cand_temp_valid
+                is_perm_valid = cand_perm_valid
+                break
+
+        if not user:
+            all_no_pwd = all(not c.password_hash and not c.temp_password for c in candidates)
+            if all_no_pwd:
                 raise HTTPException(status_code=400, detail="Esta cuenta aún no tiene contraseña establecida. Por favor ve a la pestaña 'Recuperar Clave' para solicitar tu PIN temporal de primer acceso.")
             raise HTTPException(status_code=400, detail="Contraseña o PIN temporal incorrecto. Verifique e intente nuevamente.")
 
         needs_password_change = is_temp_valid
 
-        # Determine unit for condo resident
+        # 4. Determine unit for resident
         unit_id = None
-        if req_role in ["owner", "tenant"]:
-            for u in sm.data["units"]:
-                if req_role == "owner" and (str(u.get("cedula_owner") or "").strip() == req_cedula or str(u.get("email1") or "").strip().lower() == req_email):
+        u_ced = str(user.cedula or "").strip()
+        u_em = str(user.email or "").strip().lower()
+
+        if user.role in ["owner", "tenant"]:
+            for u in sm.data.get("units", []):
+                if user.role == "owner" and (str(u.get("cedula_owner") or "").strip() == u_ced or str(u.get("email1") or "").strip().lower() == u_em):
                     unit_id = str(u["id"])
                     break
-                elif req_role == "tenant" and (str(u.get("cedula_tenant") or "").strip() == req_cedula or str(u.get("email2") or "").strip().lower() == req_email):
+                elif user.role == "tenant" and (str(u.get("cedula_tenant") or "").strip() == u_ced or str(u.get("email2") or "").strip().lower() == u_em):
                     unit_id = str(u["id"])
                     break
 
             if not unit_id:
-                if req_role == "owner":
+                if user.role == "owner":
                     db_u = session.exec(select(Unit).where(
-                        (func.trim(Unit.cedula_owner) == req_cedula) | (func.lower(Unit.email1) == req_email)
+                        (func.trim(Unit.cedula_owner) == u_ced) | (func.lower(Unit.email1) == u_em)
                     )).first()
                     if db_u:
                         unit_id = str(db_u.id)
-                elif req_role == "tenant":
+                elif user.role == "tenant":
                     db_u = session.exec(select(Unit).where(
-                        (func.trim(Unit.cedula_tenant) == req_cedula) | (func.lower(Unit.email2) == req_email)
+                        (func.trim(Unit.cedula_tenant) == u_ced) | (func.lower(Unit.email2) == u_em)
                     )).first()
                     if db_u:
                         unit_id = str(db_u.id)
 
-        # Issue signed JWT
+        # 5. Issue JWT with resolved user role
         token_payload = {
             "sub": user.cedula or user.email,
             "email": user.email,

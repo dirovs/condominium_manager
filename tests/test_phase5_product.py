@@ -95,9 +95,29 @@ def test_reconciliation_review_queue(test_sm, client, admin_headers):
 
 
 def test_database_backup_utility():
-    backup_path = backup_database()
-    assert backup_path is not None
-    assert os.path.exists(backup_path)
-    # Clean up test backup file
-    if os.path.exists(backup_path):
-        os.remove(backup_path)
+    import sqlite3
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    test_db = os.path.join(base_dir, "condominium.db")
+    created_dummy = False
+    if not os.path.exists(test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        cursor.execute("CREATE TABLE test_backup (id INTEGER PRIMARY KEY, note TEXT)")
+        cursor.execute("INSERT INTO test_backup (note) VALUES ('test_entry')")
+        conn.commit()
+        conn.close()
+        created_dummy = True
+
+    try:
+        backup_path = backup_database()
+        assert backup_path is not None, "El respaldo de la base de datos no debió ser None"
+        assert os.path.exists(backup_path), f"El archivo de respaldo {backup_path} no fue creado en disco"
+        # Clean up test backup file
+        if os.path.exists(backup_path):
+            os.remove(backup_path)
+    finally:
+        if created_dummy and os.path.exists(test_db):
+            try:
+                os.remove(test_db)
+            except Exception:
+                pass
